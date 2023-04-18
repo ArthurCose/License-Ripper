@@ -184,7 +184,6 @@ async function main() {
       const resolvedLicense = resolveLicense(result.licenseText);
 
       if (!resolvedLicense) {
-        console.log(result.name, result.licenseText);
         return true;
       }
 
