@@ -139,13 +139,11 @@ async function main() {
     for (const result of results.resolved) {
       const existingKey = reverseLookup[result.licenseText];
 
-      if (existingKey) {
-        result.licenseText = existingKey;
-        continue;
+      if (!existingKey) {
+        reverseLookup[result.licenseText] = result.name;
+        output.licenseText[result.name] = result.licenseText;
       }
 
-      reverseLookup[result.licenseText] = result.name;
-      output.licenseText[result.name] = result.licenseText;
       output.packages.push({ ...result, licenseText: result.name });
     }
   } else {
@@ -186,6 +184,7 @@ async function main() {
       const resolvedLicense = resolveLicense(result.licenseText);
 
       if (!resolvedLicense) {
+        console.log(result.name, result.licenseText);
         return true;
       }
 
