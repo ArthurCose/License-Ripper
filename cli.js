@@ -131,7 +131,7 @@ async function main() {
   } else if (compress) {
     output = {
       licenseText: {},
-      packages: results.resolved,
+      packages: [],
     };
 
     const reverseLookup = {};
@@ -146,7 +146,7 @@ async function main() {
 
       reverseLookup[result.licenseText] = result.name;
       output.licenseText[result.name] = result.licenseText;
-      result.licenseText = result.name;
+      output.packages.push({ ...result, licenseText: result.name });
     }
   } else {
     output = results.resolved;
