@@ -1,9 +1,10 @@
 import * as fs from "fs/promises";
 import path from "path";
-import fetch from "node-fetch";
 import resolveLicense from "./resolve-license.js";
 import { ripMarkdownLicense } from "./rip-markdown-license.js";
 import spdxCorrect from "spdx-correct";
+import { Fs, LocalFs, resolveRemoteFs } from "./fs.js";
+import resolveRepoUrl from "./resolve-repo.js";
 
 export type ResolvedPackage = {
   name: string;
@@ -126,11 +127,7 @@ async function findLicenseText(
   options?: Options
 ) {
   // try grabbing the license from local files
-  const localResult = await licenseFromFolder(
-    await fs.readdir(baseDir),
-    (name) => tryDisk(path.join(baseDir, name)),
-    options
-  );
+  const localResult = await licenseFromFolder(new LocalFs(baseDir), options);
 
   if (
     localResult &&
@@ -142,20 +139,18 @@ async function findLicenseText(
 
   // try grabbing the license from the repo
   const repoUrl = resolveRepoUrl(packageMeta);
-  const encodedRepoUrl = encodeURIComponent(repoUrl);
-
-  const cachedResult = await licenseFromCache(encodedRepoUrl, options);
-
-  if (cachedResult) {
-    return cachedResult;
-  }
 
   if (repoUrl) {
-    const remoteResult = await licenseFromFolder(
-      await readdirRemote(repoUrl),
-      (name) => tryDownload(repoUrl, name),
-      options
-    );
+    const encodedRepoUrl = encodeURIComponent(repoUrl);
+    const remoteFs = resolveRemoteFs(repoUrl);
+
+    const cachedResult = await licenseFromCache(encodedRepoUrl, options);
+
+    if (cachedResult) {
+      return cachedResult;
+    }
+
+    const remoteResult = await licenseFromFolder(remoteFs, options);
 
     if (remoteResult) {
       cacheResult(encodedRepoUrl, remoteResult, options);
@@ -208,20 +203,19 @@ async function cacheResult(name: string, data: any, options?: Options) {
 }
 
 async function licenseFromFolder(
-  entries: string[],
-  tryRead: (path: string) => Promise<string | undefined>,
+  fs: Fs,
   options?: Options
 ): Promise<{ text: string; source: string } | undefined> {
   let noticeList = [];
   let licenseList = [];
   let readmeLicense = "";
 
-  for (const entry of entries) {
+  for (const entry of await fs.readdir()) {
     const lowercaseName = entry.toLowerCase();
 
     // test as apache notice file
     if (lowercaseName.includes("notice")) {
-      const text = await tryRead(entry);
+      const text = await fs.readFile(entry);
       noticeList.push(text);
       continue;
     }
@@ -234,7 +228,7 @@ async function licenseFromFolder(
 
     if (isLicense) {
       // append the license file
-      const text = await tryRead(entry);
+      const text = await fs.readFile(entry);
       licenseList.push(text);
       continue;
     }
@@ -242,7 +236,7 @@ async function licenseFromFolder(
     // test as readme file
     if (lowercaseName.startsWith("readme")) {
       // overwrite the readme license text
-      const text = await tryRead(entry);
+      const text = await fs.readFile(entry);
       readmeLicense = ripMarkdownLicense(text);
     }
   }
@@ -272,115 +266,8 @@ async function licenseFromFolder(
   }
 }
 
-function resolveRepoUrl(packageMeta): string {
-  let repoUrl: string | undefined =
-    packageMeta.repository?.url || packageMeta.repository;
-
-  if (!repoUrl) {
-    return;
-  }
-
-  if (repoUrl.startsWith("git://")) {
-    // swap git for https
-    repoUrl = "https" + repoUrl.slice(3);
-  }
-
-  if (repoUrl.startsWith("git+")) {
-    // drop git+ prefix
-    repoUrl = repoUrl.slice(4);
-  } else if (repoUrl.startsWith("git@")) {
-    // drop git@ prefix
-    repoUrl = "https://" + repoUrl.slice(4);
-    repoUrl = repoUrl.replace(".com:", ".com/");
-  }
-
-  if (repoUrl.endsWith(".git")) {
-    // drop .git suffix
-    repoUrl = repoUrl.slice(0, -4);
-  }
-
-  if (!repoUrl.startsWith("http") && !repoUrl.includes("://")) {
-    // assume github
-    repoUrl = "https://github.com/" + repoUrl;
-  }
-
-  repoUrl = repoUrl.replace("//www.", "//");
-
-  if (repoUrl.startsWith("https://github.com/")) {
-    // get the root of the repo, fixes issues with tryDownload (HEAD) and readdirRemote (/repos/:user/:repo/contents/:path)
-    // todo: might be a bad assumption, but license files tend to be in the root folder and this can lower api requests
-    const index = nthIndexOf(repoUrl, "/", 4);
-
-    if (index > -1) {
-      repoUrl = repoUrl.slice(0, index);
-    }
-  }
-
-  return repoUrl;
-}
-
-function nthIndexOf(text: string, searchString: string, n: number) {
-  let index = -1;
-
-  while (n-- >= 0) {
-    index = text.indexOf(searchString, index + 1);
-
-    if (index == -1) {
-      break;
-    }
-  }
-
-  return index;
-}
-
 async function tryDisk(path: string): Promise<string | undefined> {
   try {
-    const buffer = await fs.readFile(path);
-    return buffer.toString();
+    return await fs.readFile(path, "utf8");
   } catch {}
-}
-
-async function tryDownload(
-  repoUrl: string,
-  name: string
-): Promise<string | undefined> {
-  try {
-    // todo: gitlab
-    repoUrl = repoUrl.replace("github.com", "raw.githubusercontent.com");
-
-    const response = await fetch(repoUrl + "/HEAD/" + name);
-
-    if (response.status == 200) {
-      return response.text();
-    }
-  } catch {}
-}
-
-async function readdirRemote(url: string) {
-  if (url.startsWith("https://github.com/")) {
-    url = url.replace("https://github.com/", "https://api.github.com/repos/");
-    url += "/contents";
-  } else {
-    // todo: gitlab
-    return [];
-  }
-
-  try {
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      console.error(
-        `"${url}" responded with ${response.status}:`,
-        await response.text()
-      );
-
-      return [];
-    }
-
-    const contents = (await response.json()) as { name: string }[];
-
-    return contents.map((file) => file.name);
-  } catch {
-    return [];
-  }
 }
