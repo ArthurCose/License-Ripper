@@ -1,7 +1,8 @@
 {
   "name": "license-ripper",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "Rips license text from LICENSE and README files.",
+  "repository": "https://github.com/ArthurCose/License-Ripper",
   "type": "module",
   "bin": {
     "license-ripper": "cli.js"
@@ -15,7 +16,7 @@
   "scripts": {
     "dev": "npm run build && node cli.js",
     "build": "tsc",
-    "test": "ava"
+    "test": "ava --serial"
   },
   "author": "Arthur Cosentino",
   "license": "ISC",
@@ -23,7 +24,8 @@
     "marked": "^4.3.0",
     "node-fetch": "3.3",
     "spdx-correct": "^3.2.0",
-    "spdx-satisfies": "^5.0.1"
+    "spdx-satisfies": "^5.0.1",
+    "yaml": "^2.2.1"
   },
   "devDependencies": {
     "@ava/typescript": "^4.0.0",

@@ -1,12 +1,17 @@
 # License Ripper
 
-Searches `node_modules` for licenses within loosely matched NOTICE, LICENSE, COPYING, and README files to automate most of the license compliance work, resolving package repositories and downloading copies if necessary.
+Searches `node_modules` for licenses within loosely matched NOTICE, LICENSE/LICENCE, COPYING, and README files to automate most of the license compliance work, resolving package repositories and downloading copies if necessary.
 
-Output should still be checked as it's possible for incomplete or incorrect data to pass through, alternate package managers such as pnpm and yarn are not yet supported, some packages may even be skipped with nested `node_modules` or globally installed packages. When used as a CLI program, it will warn when the "licenseText" does not appear to match with the license type, or if any license type was resolved using "licenseText" instead of `package.toml` (marked with a `*` at the end). These warnings can be resolved through the `overrides` config option to clear up any issues.
+Output should still be checked as it's possible for incomplete or incorrect data to pass through, some alternate package managers such as yarn are not yet supported, and some packages may even be skipped with globally installed packages. When used as a CLI program, it will warn when the "licenseText" does not appear to match with the license type, or if any license type was resolved using "licenseText" instead of `package.toml` (marked with a `*` at the end). These warnings can be resolved through the `overrides` config option to clear up any issues.
 
 Similar tools exist such as [license-checker](https://www.npmjs.com/package/license-checker) and [license-report](https://www.npmjs.com/package/license-report) exist, however the primary purpose of these other tools is to report the license type of other packages and will at most allow you to see where you can access the license.
 
 If you're using webpack, [webpack-license-plugin](https://github.com/codepunkt/webpack-license-plugin) is a more mature library that provides license text and hooks into webpack to [resolve only the packages that make it to the final build](https://github.com/davglass/license-checker/issues/245#issuecomment-1254590401), useful when there's package licenses you can't comply with (such as GPL/LGPL) that are only used as development tools or server side.
+
+## Supported Package Managers
+
+- npm
+- pnpm
 
 ## CLI
 
