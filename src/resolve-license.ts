@@ -18,10 +18,12 @@ const APACHE2 = [
 const EUPL1_1 = ["Licensed under the EUPL V.1.1"];
 
 const BSD0 = [
-  "Permission to use, copy, modify, and/or distribute this software for any",
-  "purpose with or without fee is hereby granted.",
+  [
+    "Permission to use, copy, modify, and/or distribute this software for any",
+    "purpose with or without fee is hereby granted.",
 
-  "THE SOFTWARE IS PROVIDED",
+    "THE SOFTWARE IS PROVIDED",
+  ].join(" "),
 ];
 
 const BSD1 = [
