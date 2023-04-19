@@ -46,6 +46,7 @@ async function main() {
   let compress = false;
   let clean = false;
   let outputFile;
+  let projectRoot = "";
   const options = {};
 
   for (const group of groupArgs()) {
@@ -91,6 +92,13 @@ async function main() {
       case "--help":
         printHelp();
         return;
+
+      default:
+        if (group[0].startsWith("-")) {
+          console.error(`Unsupported argument '${group[0]}'`);
+          process.exit(1);
+        }
+        projectRoot = group[0];
     }
   }
 
@@ -106,7 +114,7 @@ async function main() {
     return;
   }
 
-  const results = await ripAll("./", options);
+  const results = await ripAll(projectRoot, options);
 
   // sort results
   results.resolved.sort((a, b) => {
@@ -224,13 +232,7 @@ function groupArgs() {
     }
 
     const argConfig = supportedArguments[arg];
-
-    if (!argConfig) {
-      console.error(`Unsupported argument '${arg}'`);
-      process.exit(1);
-    }
-
-    expectedArgs = argConfig.args?.length || 0;
+    expectedArgs = argConfig?.args?.length || 0;
 
     processedArgs.push([arg]);
   }
@@ -252,7 +254,7 @@ async function printVersion() {
 }
 
 function printHelp() {
-  console.log("Usage: license-ripper [OPTIONS]\n");
+  console.log("Usage: license-ripper [OPTIONS] [PROJECT_ROOT]\n");
   console.log("Options:");
 
   const argsHelp = [];

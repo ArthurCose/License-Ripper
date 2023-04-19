@@ -13,7 +13,7 @@ If you're using webpack, [webpack-license-plugin](https://github.com/codepunkt/w
 `npm install -g license-ripper` or `npm install -D license-ripper` for package local usage with npx.
 
 ```
-Usage: license-ripper [OPTIONS]
+Usage: license-ripper [OPTIONS] [PROJECT_ROOT]
 
 Options:
   -o, --output <FILE_NAME>   Writes output to a file rather than stdout
