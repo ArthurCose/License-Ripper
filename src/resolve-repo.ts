@@ -1,6 +1,12 @@
-export default function resolveRepoUrl(packageMeta): string | undefined {
+import { PackageMeta } from "./package-meta.js";
+
+export default function resolveRepoUrl(
+  packageMeta: PackageMeta
+): string | undefined {
   let url: string | undefined =
-    packageMeta.repository?.url || packageMeta.repository;
+    typeof packageMeta.repository == "object"
+      ? packageMeta.repository?.url
+      : packageMeta.repository;
 
   if (!url) {
     return;
@@ -38,6 +44,8 @@ function normalizeRepoUrl(url: string) {
 
   // drop www
   url = url.replace("://www.", "://");
+  // require https
+  url = url.replace("http://", "https://");
 
   if (
     url.startsWith("https://github.com/") ||

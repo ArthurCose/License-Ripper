@@ -2,6 +2,7 @@ import * as fs from "fs/promises";
 import path from "path";
 import { Options, ResolvedPackage, ripOne } from "./rip-license.js";
 import resolveLicense from "./resolve-license.js";
+import { PackageMeta } from "./package-meta.js";
 import YAML from "yaml";
 
 export type Output = {
@@ -12,7 +13,7 @@ export type Output = {
   };
 };
 
-export { ripOne, resolveLicense };
+export { ripOne, resolveLicense, Options, ResolvedPackage };
 
 export function getDefaultCacheFolder(projectRoot: string): string {
   return path.join(projectRoot, "node_modules", ".cache", "license-ripper");
@@ -38,6 +39,12 @@ export async function ripAll(
     options.cacheFolder = getDefaultCacheFolder(projectRoot);
   }
 
+  type ResolvedMap = {
+    [name: string]: { data: ResolvedPackage; version: number[] }[];
+  };
+
+  const resolvedMap: ResolvedMap = {};
+
   for (const packagePath of await packageFolders(projectRoot, options)) {
     const data = await ripOne(packagePath, options);
 
@@ -53,7 +60,29 @@ export async function ripAll(
       errors.missingLicenseText.push(data.name);
     }
 
-    resolved.push(data);
+    // reducing duplicates by only storing the latest version when licenses are exactly the same
+    let existing = resolvedMap[data.name];
+
+    if (!existing) {
+      existing = [];
+      resolvedMap[data.name] = existing;
+    }
+
+    const version = data.version.split(".").map((v) => parseInt(v));
+
+    const match = existing.find(
+      (oldData) => data.licenseText == oldData.data.licenseText
+    );
+
+    if (!match) {
+      // add a new entry
+      existing.push({ data, version });
+      resolved.push(data);
+    } else if (isVersionNewer(version, match.version)) {
+      // overwrite existing data
+      Object.assign(match.data, data);
+      match.version = version;
+    }
   }
 
   return { resolved, errors };
@@ -63,70 +92,66 @@ async function packageFolders(
   projectRoot: string,
   options: Options
 ): Promise<string[]> {
-  const pnpmFolder = path.join(projectRoot, "node_modules", ".pnpm");
-  const pnpmLockPath = path.join(pnpmFolder, "lock.yaml");
+  try {
+    const lockPath = path.join(projectRoot, "package-lock.json");
+    const npmLockJson = await fs.readFile(lockPath, "utf8");
+    return await packageFoldersNpm(projectRoot, npmLockJson, options);
+  } catch (e) {
+    // file not found, not using npm
+  }
 
   try {
+    const pnpmFolder = path.join(projectRoot, "node_modules", ".pnpm");
+    const pnpmLockPath = path.join(pnpmFolder, "lock.yaml");
     const pnpmLockYaml = await fs.readFile(pnpmLockPath, "utf8");
     return await packageFoldersPnpm(pnpmFolder, pnpmLockYaml, options);
   } catch {
     // file not found, not using pnpm
   }
 
-  return await packageFoldersDefault(projectRoot, options);
-}
-
-async function packageFoldersDefault(
-  projectRoot: string,
-  options: Options
-): Promise<string[]> {
   if (!options.includeDev) {
-    // add dev dependencies to the ignore list
-    options.exclude = options.exclude ? [...options.exclude] : [];
-
-    try {
-      const lockFilePath = path.join(projectRoot, "package-lock.json");
-      const packageLockJson = await fs.readFile(lockFilePath, "utf8");
-      const packageLock = JSON.parse(packageLockJson);
-
-      for (const name in packageLock.dependencies) {
-        if (packageLock.dependencies[name].dev) {
-          options.exclude.push(name);
-        }
-      }
-    } catch {
-      // we'll just give up on excluding dev dependencies
-    }
+    return await packageFoldersFallbackNoDev(projectRoot, options);
   }
 
-  const modulesFolder = path.join(projectRoot, "node_modules");
+  return await packageFoldersFallback(projectRoot);
+}
 
-  const entries = await fs.readdir(modulesFolder, { withFileTypes: true });
+async function packageFoldersNpm(
+  projectRoot: string,
+  npmLockJson: string,
+  options: Options
+): Promise<string[]> {
+  let npmLock;
+
+  try {
+    npmLock = JSON.parse(npmLockJson);
+  } catch {
+    console.error("error: failed to parse npm lock file");
+    return [];
+  }
+
   const folders = [];
 
-  for (const entry of entries) {
-    if (!entry.isDirectory()) {
+  for (const packagePath in npmLock.packages) {
+    if (packagePath == "") {
       continue;
     }
 
-    const entryPath = path.join(modulesFolder, entry.name);
+    const packageData = npmLock.packages[packagePath];
 
-    if (entry.name.startsWith("@")) {
-      const subEntries = await fs.readdir(entryPath, { withFileTypes: true });
-
-      for (const subEntry of subEntries) {
-        if (!subEntry.isDirectory) {
-          continue;
-        }
-
-        const subEntryPath = path.join(entryPath, subEntry.name);
-        folders.push(subEntryPath);
-      }
-
+    if (!options.includeDev && packageData.dev) {
       continue;
     }
 
-    folders.push(entryPath);
+    const name = packagePath.slice(
+      packagePath.lastIndexOf("node_modules") + 13
+    );
+
+    if (options.exclude?.includes(name)) {
+      continue;
+    }
+
+    folders.push(path.join(projectRoot, packagePath));
   }
 
   return folders;
@@ -146,12 +171,7 @@ async function packageFoldersPnpm(
     return [];
   }
 
-  type DependencyInfo = {
-    path: string;
-    version: number[];
-  };
-
-  const dependencies: { [key: string]: DependencyInfo } = {};
+  const folders = [];
 
   for (const key in pnpmLock.packages) {
     if (!options.includeDev && pnpmLock.packages[key].dev) {
@@ -159,16 +179,10 @@ async function packageFoldersPnpm(
       continue;
     }
 
-    const name = key.slice(1, key.indexOf("@", 2));
-    let version = key
-      .slice(key.indexOf("@", 2), key.indexOf("("))
-      .split(".")
-      .map((v) => parseInt(v));
+    const nameEnd = key.indexOf("@", 2);
+    const name = key.slice(1, nameEnd);
 
-    const existingData = dependencies[name];
-
-    if (existingData && isVersionNewer(existingData.version, version)) {
-      // not the latest
+    if (options.exclude?.includes(name)) {
       continue;
     }
 
@@ -179,13 +193,131 @@ async function packageFoldersPnpm(
       name
     );
 
-    dependencies[name] = {
-      path: packagePath,
-      version,
-    };
+    folders.push(packagePath);
   }
 
-  return Object.values(dependencies).map((p) => p.path);
+  return folders;
+}
+
+const readdirOptions: { withFileTypes: true } = {
+  withFileTypes: true,
+};
+
+async function packageFoldersFallbackNoDev(
+  projectRoot: string,
+  options: Options
+): Promise<string[]> {
+  // package.json guided search
+
+  const modulesRoot = path.join(projectRoot, "node_modules");
+
+  const folders = [];
+  const needsSearch = [projectRoot];
+
+  while (needsSearch.length > 0) {
+    const searchFolder = needsSearch.pop();
+    let packageMeta: PackageMeta;
+
+    try {
+      const packageMetaPath = path.join(searchFolder, "package.json");
+      const packageMetaJson = await fs.readFile(packageMetaPath, "utf8");
+      packageMeta = JSON.parse(packageMetaJson);
+    } catch {
+      continue;
+    }
+
+    let storedPackages: string[] = [];
+    const modulesPath = path.join(searchFolder, "node_modules");
+
+    try {
+      for (const entry of await fs.readdir(modulesPath, readdirOptions)) {
+        if (!entry.isDirectory() || entry.name.startsWith(".")) {
+          continue;
+        }
+
+        if (!entry.name.startsWith("@")) {
+          // not scoped: lodash
+          storedPackages.push(entry.name);
+          continue;
+        }
+
+        // scoped: @ava/typescript
+        const entryPath = path.join(modulesPath, entry.name);
+        const scope = entry.name;
+
+        for (const entry of await fs.readdir(entryPath, readdirOptions)) {
+          if (entry.isDirectory() && !entry.name.startsWith(".")) {
+            storedPackages.push(`${scope}/${entry.name}`);
+          }
+        }
+      }
+    } catch {}
+
+    const dependencyNames = Object.keys(packageMeta.dependencies || {})
+      // npm installs all optionals by default
+      .concat(Object.keys(packageMeta.optionalDependencies || {}))
+      // these dependencies are required
+      // if it's defined only by devDependency it's a bug, but we should still track it
+      .concat(Object.keys(packageMeta.peerDependencies || {}))
+      // everything in a dependency's node_modules has been installed for something in this package, assume it's necessary
+      // necessary as it seems child dependencies may install their dependencies in parent node_modules to avoid deep trees
+      .concat(modulesRoot != modulesPath ? storedPackages : []);
+
+    for (const packageName of dependencyNames) {
+      if (options.exclude?.includes(packageName)) {
+        continue;
+      }
+
+      const packagePath = path.join(
+        storedPackages.includes(packageName) ? modulesPath : modulesRoot,
+        packageName
+      );
+
+      if (!folders.includes(packagePath)) {
+        // hasn't already been added
+        folders.push(packagePath);
+        needsSearch.push(packagePath);
+      }
+    }
+  }
+
+  return folders;
+}
+
+async function packageFoldersFallback(projectRoot: string): Promise<string[]> {
+  // readdir based search
+
+  const folders = [];
+  const needsSearch = [path.join(projectRoot, "node_modules")];
+
+  while (needsSearch.length > 0) {
+    const searchFolder = needsSearch.pop();
+    let entries;
+
+    try {
+      entries = await fs.readdir(searchFolder, readdirOptions);
+    } catch {
+      continue;
+    }
+
+    for (const entry of entries) {
+      if (!entry.isDirectory() || entry.name.startsWith(".")) {
+        continue;
+      }
+
+      const entryPath = path.join(searchFolder, entry.name);
+
+      if (entry.name.startsWith("@")) {
+        needsSearch.push(entryPath);
+        continue;
+      }
+
+      needsSearch.push(path.join(entryPath, "node_modules"));
+      folders.push(entryPath);
+    }
+  }
+
+  return folders;
 }
 
 function isVersionNewer(sample: number[], against: number[]): boolean {

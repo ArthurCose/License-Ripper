@@ -12,6 +12,7 @@ If you're using webpack, [webpack-license-plugin](https://github.com/codepunkt/w
 
 - npm
 - pnpm
+- yarn classic
 
 ## CLI
 

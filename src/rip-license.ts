@@ -5,10 +5,13 @@ import { ripMarkdownLicense } from "./rip-markdown-license.js";
 import spdxCorrect from "spdx-correct";
 import { Fs, LocalFs, resolveRemoteFs } from "./fs.js";
 import resolveRepoUrl from "./resolve-repo.js";
+import resolveMetaLicense from "./resolve-meta-license.js";
+import { PackageMeta } from "./package-meta.js";
 
 export type ResolvedPackage = {
   name: string;
-  folder: string;
+  version: string;
+  path: string;
   license?: string;
   licenseText?: string;
   licenseTextSource?: "license" | "mixed" | "readme" | "override";
@@ -46,7 +49,7 @@ export async function ripOne(
     return;
   }
 
-  const packageMeta = JSON.parse(packageJSON);
+  const packageMeta: PackageMeta = JSON.parse(packageJSON);
 
   if (options?.exclude?.includes(packageMeta.name)) {
     // checking for folder name above, but the folder name does not always match the package name.
@@ -66,7 +69,7 @@ export async function ripOne(
   }
 
   const overrides = options?.overrides?.[packageMeta.name];
-  let license = overrides?.license || packageMeta.license;
+  let license = overrides?.license || resolveMetaLicense(packageMeta);
 
   if (license) {
     license = spdxCorrect(license, { upgrade: false });
@@ -81,7 +84,8 @@ export async function ripOne(
 
   const output: ResolvedPackage = {
     name: packageMeta.name,
-    folder: packagePath,
+    version: packageMeta.version,
+    path: packagePath,
     license,
     licenseText,
     licenseTextSource,
@@ -92,11 +96,11 @@ export async function ripOne(
   }
 
   if (packageMeta.funding && options?.includeFunding) {
-    if (!Array.isArray(packageMeta)) {
-      output.funding = [packageMeta.funding];
-    }
+    const funding = Array.isArray(packageMeta)
+      ? (packageMeta.funding as (string | { url: string })[])
+      : [packageMeta.funding];
 
-    output.funding = output.funding.map((info: any) =>
+    output.funding = funding.map((info: any) =>
       typeof info == "string" ? info : info.url
     );
   }
@@ -105,7 +109,7 @@ export async function ripOne(
 }
 
 async function licenseTextFromOverride(
-  packageMeta,
+  packageMeta: PackageMeta,
   options?: Options
 ): Promise<string | undefined> {
   const override = options?.overrides?.[packageMeta.name];
@@ -123,7 +127,7 @@ async function licenseTextFromOverride(
 
 async function findLicenseText(
   baseDir: string,
-  packageMeta,
+  packageMeta: PackageMeta,
   options?: Options
 ) {
   // try grabbing the license from local files
