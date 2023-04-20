@@ -26,7 +26,7 @@ const supportedArguments: { [key: string]: ArgumentConfig } = {
   },
   "--compress": {
     description:
-      "Changes output to recycle licenseText, replacing the value with a key",
+      "Changes output to recycle license text, replacing the value with a key",
   },
   "--include-dev": {
     description: "Includes dev dependencies in the output",
@@ -225,7 +225,7 @@ async function main() {
       }
 
       try {
-        return !spdxSatisifies(expression, resolvedExpression);
+        return !spdxSatisifies(resolvedExpression, expression);
       } catch (e) {
         // invalid spdx
         logError(

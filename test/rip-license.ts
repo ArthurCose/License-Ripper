@@ -1,6 +1,6 @@
 import test from "ava";
 import { ripOne } from "../src/rip-license.js";
-import { getDefaultCacheFolder } from "../src/index.js";
+import { getDefaultCacheFolder } from "../dist/index.js";
 
 const PACKAGE_FOLDER = "test/packages/";
 const OPTIONS = {
@@ -10,7 +10,7 @@ const OPTIONS = {
 
 test("download-licenses", async (t) => {
   const packages = [
-    ["dual-licensed-mit-apache-package", "(Apache-2.0 AND MIT AND UNKNOWN)*"],
+    ["dual-licensed-mit-apache-package", "(Apache-2.0 AND MIT)*"],
     ["gitlab", "(UNKNOWN AND MIT)*"],
   ];
 
