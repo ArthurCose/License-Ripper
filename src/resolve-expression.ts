@@ -19,6 +19,8 @@ const APACHE2 = [
 
 const EUPL1_1 = ["Licensed under the EUPL V.1.1"];
 
+const BLUE_OAK_1_LINKS = ["https://blueoakcouncil.org/license/1.0.0"];
+
 const BSD0 = [
   [
     "Permission to use, copy, modify, and/or distribute this software for any",
@@ -168,10 +170,14 @@ export default function resolveExpression(
   }
 
   if (
-    APACHE2_LINKS.some((link) => licenseText.includes(link)) ||
+    includesLink(licenseText, APACHE2_LINKS) ||
     includesSequential(licenseText, APACHE2)
   ) {
     matches.push("Apache-2.0");
+  }
+
+  if (includesLink(licenseText, BLUE_OAK_1_LINKS)) {
+    matches.push("BlueOak-1.0.0");
   }
 
   if (includesSequential(licenseText, BSD0)) {
@@ -189,13 +195,13 @@ export default function resolveExpression(
   }
 
   if (
-    CC0_LINKS.some((link) => licenseText.includes(link)) ||
+    includesLink(licenseText, CC0_LINKS) ||
     includesSequential(licenseText, CC0_1_0)
   ) {
     matches.push("CC0-1.0");
   }
 
-  if (CC_BY_3_LINKS.some((link) => licenseText.includes(link))) {
+  if (includesLink(licenseText, CC_BY_3_LINKS)) {
     matches.push("CC-BY-3.0");
   }
 
@@ -220,7 +226,7 @@ export default function resolveExpression(
   }
 
   if (
-    MIT_LINKS.some((link) => licenseText.includes(link)) ||
+    includesLink(licenseText, MIT_LINKS) ||
     includesSequential(licenseText, MIT)
   ) {
     matches.push("MIT");
@@ -240,6 +246,10 @@ export default function resolveExpression(
 
   // use AND to be as strict as possible, the user can override with OR if we're incorrect
   return "(" + matches.join(" AND ") + ")";
+}
+
+function includesLink(text: string, links: string[]): boolean {
+  return links.some((link) => text.includes(link));
 }
 
 function includesSequential(text: string, searchList: string[]): boolean {

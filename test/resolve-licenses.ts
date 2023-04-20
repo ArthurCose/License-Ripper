@@ -14,6 +14,7 @@ test("resolve-license", async (t) => {
     ["Apache-2.0-aws-invalid-dependency.txt", "Apache-2.0"],
     ["Apache-2.0-aws-sign2.txt", "Apache-2.0"],
     ["Apache-2.0-caseless.txt", "Apache-2.0"],
+    ["BlueOak-1.0.0-jackspeak.md", "BlueOak-1.0.0"],
     ["BSD3-bcrypt-nodejs.txt", "BSD-3-Clause"],
     ["BSD3-hoist-non-react-statics.txt", "BSD-3-Clause"],
     ["CC0-1.0-mdn-data.txt", "CC0-1.0"],

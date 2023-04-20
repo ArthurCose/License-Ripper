@@ -21,7 +21,7 @@
   ],
   "scripts": {
     "dev": "npm run build && node dist/cli.js",
-    "build": "tsc",
+    "build": "rimraf dist && tsc",
     "test": "ava --serial",
     "fresh-test": "rimraf package-lock.json test/pm-structures node_modules; npm i && npm run dev -- --summary --include-dev; ava --serial"
   },
