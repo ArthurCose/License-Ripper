@@ -26,7 +26,7 @@ export type Options = {
   includeFunding?: boolean;
   /** Includes devDependencies in the output, defaults to false */
   includeDev?: boolean;
-  /** Sets the text used to join multiple license files, defaults to "\n\n-\n\n" */
+  /** Sets the text used to join multiple license files, defaults to "\n\n\n\n" */
   joinText?: string;
   /** List of package names to exclude from results, used when the license is only provided from a parent package */
   exclude?: string[];
@@ -245,7 +245,7 @@ async function licenseFromFolder(
     }
   }
 
-  const joinText = options?.joinText || "\n\n-\n\n";
+  const joinText = options?.joinText || "\n\n\n\n";
 
   if (licenseList.length > 0 && readmeLicense) {
     // prepend notice
