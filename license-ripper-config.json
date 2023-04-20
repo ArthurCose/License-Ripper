@@ -1,0 +1,4 @@
+{
+  "includeDev": true,
+  "exclude": ["eastasianwidth", "fast-diff"]
+}

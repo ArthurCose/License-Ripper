@@ -21,9 +21,10 @@
   ],
   "scripts": {
     "dev": "npm run build && node dist/cli.js",
-    "build": "rimraf dist && tsc",
-    "test": "ava --serial",
-    "fresh-test": "rimraf package-lock.json test/pm-structures node_modules; npm i && npm run dev -- --summary --include-dev; ava --serial"
+    "build": "tsc",
+    "test": "npm run build && ava --serial",
+    "fresh-test": "rimraf package-lock.json test/pm-structures node_modules; npm i && npm run dev -- --summary --config license-ripper-config.json; ava --serial",
+    "prepublishOnly": "rimraf dist && tsc && npm run test"
   },
   "dependencies": {
     "chalk": "^5.2.0",
@@ -51,7 +52,7 @@
       "ts": "module"
     },
     "nodeArguments": [
-      "--loader=ts-node/esm"
+      "--loader=ts-node/esm/transpile-only"
     ]
   }
 }

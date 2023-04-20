@@ -1,5 +1,5 @@
 import test, { ExecutionContext } from "ava";
-import { ripAll, Options } from "../src/index.js";
+import { ripAll, Options } from "../dist/index.js";
 import fs from "fs-extra";
 import child_process from "child_process";
 import { promisify } from "util";
