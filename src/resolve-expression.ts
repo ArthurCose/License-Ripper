@@ -1,3 +1,5 @@
+import { ResolvedLicense } from "./rip-license.js";
+
 const AFL2_1 = ["Licensed under the Academic Free License version 2.1"];
 const AFL3 = ["Licensed under the Academic Free License version 3.0"];
 
@@ -150,7 +152,7 @@ const ZLIB = [
   "This notice may not be removed or altered from any source distribution.",
 ];
 
-export default function resolveLicense(
+export default function resolveExpression(
   licenseText: string
 ): string | undefined {
   // simplify testing
@@ -233,7 +235,7 @@ export default function resolveLicense(
   }
 
   if (matches.length <= 1) {
-    return matches[0];
+    return matches[0] || "UNKNOWN";
   }
 
   // use AND to be as strict as possible, the user can override with OR if we're incorrect
@@ -254,4 +256,45 @@ function includesSequential(text: string, searchList: string[]): boolean {
 
     return true;
   });
+}
+
+export function mergeExpressions(licenses: ResolvedLicense[]): string {
+  const identifiers: string[] = [];
+
+  for (const license of licenses) {
+    if (!license.expression) {
+      // occurs when license.type == "notice"
+      continue;
+    }
+
+    if (license.source == "readme" && license.expression == "UNKNOWN") {
+      // ignore UNKNOWN readme licenses, as they might just contain a simple reference: MIT
+      continue;
+    }
+
+    if (!license.expression.startsWith("(")) {
+      if (!identifiers.includes(license.expression)) {
+        identifiers.push(license.expression);
+      }
+
+      continue;
+    }
+
+    const expressionIdentifiers = license.expression
+      .slice(1, -1)
+      .split(" AND ");
+
+    for (const identifier of expressionIdentifiers) {
+      if (!identifiers.includes(identifier)) {
+        identifiers.push(identifier);
+      }
+    }
+  }
+
+  if (identifiers.length <= 1) {
+    return identifiers[0] || "UNKNOWN";
+  }
+
+  // use AND to be as strict as possible, the user can override with OR if we're incorrect
+  return "(" + identifiers.join(" AND ") + ")";
 }

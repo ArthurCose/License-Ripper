@@ -1,6 +1,7 @@
 import * as fs from "fs/promises";
 import path from "path";
 import fetch from "node-fetch";
+import { logError } from "./log.js";
 
 export interface Fs {
   readFile(path: string): Promise<string | undefined>;
@@ -33,7 +34,7 @@ export function resolveRemoteFs(repoUrl: string): Fs {
     return new GitLabFs(repoUrl);
   }
 
-  console.error("unsupported repository url:", repoUrl);
+  logError(`unsupported repository url \"${repoUrl}\"`);
   return new NullFs();
 }
 
@@ -74,9 +75,9 @@ class GitHubFs implements Fs {
       const response = await fetch(this.readdirUrl);
 
       if (!response.ok) {
-        console.error(
-          `"${this.readdirUrl}" responded with ${response.status}:`,
-          await response.text()
+        logError(
+          `"${this.readdirUrl}" responded with ${response.status}\n` +
+            (await response.text())
         );
 
         return [];
@@ -122,9 +123,9 @@ class GitLabFs {
         const response = await fetch(nextUrl);
 
         if (!response.ok) {
-          console.error(
-            `"${nextUrl}" responded with ${response.status}:`,
-            await response.text()
+          logError(
+            `"${nextUrl}" responded with ${response.status}\n` +
+              (await response.text())
           );
           break;
         }

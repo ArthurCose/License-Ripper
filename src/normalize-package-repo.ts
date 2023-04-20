@@ -1,6 +1,6 @@
 import { PackageMeta } from "./package-meta.js";
 
-export default function resolveRepoUrl(
+export default function normalizePackageRepo(
   packageMeta: PackageMeta
 ): string | undefined {
   let url: string | undefined =

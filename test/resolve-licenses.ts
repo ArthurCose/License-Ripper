@@ -1,6 +1,6 @@
 import fs from "fs/promises";
 import test from "ava";
-import resolveLicense from "../src/resolve-license.js";
+import resolveLicenseExpression from "../src/resolve-expression.js";
 import { ripMarkdownLicense } from "../src/rip-markdown-license.js";
 import spdxCorrect from "spdx-correct";
 
@@ -34,7 +34,7 @@ test("resolve-license", async (t) => {
     const text = await fs.readFile(LICENSE_FOLDER + path, "utf8");
 
     t.deepEqual(
-      resolveLicense(text),
+      resolveLicenseExpression(text),
       spdxCorrect(expected, { upgrade: false }),
       path
     );
@@ -54,7 +54,7 @@ test("resolve-readme-license", async (t) => {
     t.assert(licenseText != undefined);
 
     t.deepEqual(
-      resolveLicense(licenseText!),
+      resolveLicenseExpression(licenseText!),
       spdxCorrect(expected, { upgrade: false }),
       path
     );

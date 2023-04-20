@@ -1,20 +1,26 @@
 import * as fs from "fs/promises";
-import path from "path";
-import resolveLicense from "./resolve-license.js";
+import resolveExpression, { mergeExpressions } from "./resolve-expression.js";
 import { ripMarkdownLicense } from "./rip-markdown-license.js";
 import spdxCorrect from "spdx-correct";
 import { Fs, LocalFs, resolveRemoteFs } from "./fs.js";
-import resolveRepoUrl from "./resolve-repo.js";
-import resolveMetaLicense from "./resolve-meta-license.js";
+import normalizePackageRepo from "./normalize-package-repo.js";
+import resolveMetaLicenseExpression from "./normalize-package-license.js";
 import { PackageMeta } from "./package-meta.js";
+import { cacheResult, licenseFromCache } from "./cache.js";
+
+// make sure to increment CACHE_VERSION if this changes
+export type ResolvedLicense = {
+  expression?: string;
+  source: "license" | "readme" | "override" | "notice";
+  text: string;
+};
 
 export type ResolvedPackage = {
   name: string;
   version: string;
   path: string;
-  license?: string;
-  licenseText?: string;
-  licenseTextSource?: "license" | "mixed" | "readme" | "override";
+  licenseExpression: string;
+  licenses: ResolvedLicense[];
   homepage?: string;
   repository?: string;
   funding?: string[];
@@ -29,13 +35,18 @@ export type Options = {
   includeFunding?: boolean;
   /** Includes devDependencies in the output, defaults to false */
   includeDev?: boolean;
-  /** Sets the text used to join multiple license files, defaults to "\n\n\n\n" */
-  joinText?: string;
   /** List of package names to exclude from results, used when the license is only provided from a parent package */
   exclude?: string[];
   /** Useful for getting rid of warnings and handling cases where the tool fails to grab the license */
   overrides?: {
-    [packageName: string]: { license?: string; text?: string; file?: string };
+    [packageName: string]: {
+      licenseExpression: string;
+      licenses: {
+        expression?: string;
+        text?: string;
+        file?: string;
+      }[];
+    };
   };
   /** Defaults to [projectRoot]/node_modules/.cache/license-ripper */
   cacheFolder?: string;
@@ -60,38 +71,29 @@ export async function ripOne(
     return;
   }
 
-  let licenseText = await licenseTextFromOverride(packageMeta, options);
-  let licenseTextSource;
+  let licenses = await licensesTextFromOverride(packageMeta, options);
 
-  if (licenseText) {
-    licenseTextSource = "override";
-  } else {
-    const result = await findLicenseText(packagePath, packageMeta, options);
-    licenseText = result?.text;
-    licenseTextSource = result?.source;
+  if (licenses.length == 0) {
+    licenses = await findLicenseText(packagePath, packageMeta, options);
   }
 
   const overrides = options?.overrides?.[packageMeta.name];
-  let license = overrides?.license || resolveMetaLicense(packageMeta);
+  let licenseExpression =
+    overrides?.licenseExpression || resolveMetaLicenseExpression(packageMeta);
 
-  if (license) {
-    license = spdxCorrect(license, { upgrade: false });
-  } else if (licenseText) {
-    license = resolveLicense(licenseText);
-
-    if (license) {
-      // mark this as modified
-      license += "*";
-    }
+  if (licenseExpression) {
+    licenseExpression =
+      spdxCorrect(licenseExpression, { upgrade: false }) || licenseExpression;
+  } else if (licenses.length > 0) {
+    licenseExpression = mergeExpressions(licenses) + "*";
   }
 
   const output: ResolvedPackage = {
     name: packageMeta.name,
     version: packageMeta.version,
     path: packagePath,
-    license,
-    licenseText,
-    licenseTextSource,
+    licenseExpression,
+    licenses,
   };
 
   if (options?.includeHomepage) {
@@ -99,7 +101,7 @@ export async function ripOne(
   }
 
   if (options?.includeRepository) {
-    output.repository = resolveRepoUrl(packageMeta);
+    output.repository = normalizePackageRepo(packageMeta);
   }
 
   if (packageMeta.funding && options?.includeFunding) {
@@ -115,41 +117,59 @@ export async function ripOne(
   return output;
 }
 
-async function licenseTextFromOverride(
+async function licensesTextFromOverride(
   packageMeta: PackageMeta,
   options?: Options
-): Promise<string | undefined> {
+): Promise<ResolvedLicense[]> {
   const override = options?.overrides?.[packageMeta.name];
+  const resolved: ResolvedLicense[] = [];
 
   if (!override) {
-    return;
+    return resolved;
   }
 
-  if (override.file) {
-    return await fs.readFile(override.file, "utf8");
+  for (const overrideLicense of override.licenses) {
+    const license: ResolvedLicense = {
+      expression: "UNKNOWN",
+      source: "override",
+      text: "",
+    };
+
+    if (overrideLicense.file) {
+      license.text = await fs.readFile(overrideLicense.file, "utf8");
+    } else if (overrideLicense.text) {
+      license.text = overrideLicense.text;
+    }
+
+    if (license.text) {
+      resolveExpression(license.text);
+    }
+
+    resolved.push(license);
   }
 
-  return override.text;
+  return resolved;
 }
 
 async function findLicenseText(
   baseDir: string,
   packageMeta: PackageMeta,
   options?: Options
-) {
+): Promise<ResolvedLicense[]> {
   // try grabbing the license from local files
-  const localResult = await licenseFromFolder(new LocalFs(baseDir), options);
+  const localResult = await licenseFromFolder(new LocalFs(baseDir));
 
   if (
-    localResult &&
-    (localResult.source != "readme" || resolveLicense(localResult.text))
+    localResult.some(
+      (license) => license.source != "readme" || license.expression != "UNKNOWN"
+    )
   ) {
     // stop early if we have a valid result
     return localResult;
   }
 
   // try grabbing the license from the repo
-  const repoUrl = resolveRepoUrl(packageMeta);
+  const repoUrl = normalizePackageRepo(packageMeta);
 
   if (repoUrl) {
     const encodedRepoUrl = encodeURIComponent(repoUrl);
@@ -161,14 +181,14 @@ async function findLicenseText(
       return cachedResult;
     }
 
-    const remoteResult = await licenseFromFolder(remoteFs, options);
+    const remoteResult = await licenseFromFolder(remoteFs);
 
-    if (remoteResult) {
+    if (remoteResult.length > 0) {
       cacheResult(encodedRepoUrl, remoteResult, options);
       return remoteResult;
     }
 
-    if (localResult) {
+    if (localResult.length > 0) {
       // cache our local result to reduce API usage
       cacheResult(encodedRepoUrl, localResult, options);
     }
@@ -177,46 +197,7 @@ async function findLicenseText(
   return localResult;
 }
 
-async function licenseFromCache(name: string, options?: Options) {
-  const cacheFolder = options?.cacheFolder;
-
-  if (!cacheFolder) {
-    return;
-  }
-
-  try {
-    const text = await fs.readFile(path.join(cacheFolder, name), "utf8");
-
-    return JSON.parse(text);
-  } catch {
-    // ok to fail, either it doesn't exist or we'll fix it when we cache new results
-  }
-}
-
-async function cacheResult(name: string, data: any, options?: Options) {
-  const cacheFolder = options?.cacheFolder;
-
-  if (!cacheFolder) {
-    return;
-  }
-
-  try {
-    await fs.mkdir(cacheFolder, { recursive: true });
-  } catch {
-    // ignore errors as it may just complain about the folder already existing
-  }
-
-  try {
-    await fs.writeFile(path.join(cacheFolder, name), JSON.stringify(data));
-  } catch {
-    // it's just cache, shouldn't matter too much
-  }
-}
-
-async function licenseFromFolder(
-  fs: Fs,
-  options?: Options
-): Promise<{ text: string; source: string } | undefined> {
+async function licenseFromFolder(fs: Fs): Promise<ResolvedLicense[]> {
   let noticeList = [];
   let licenseList = [];
   let readmeLicense = "";
@@ -252,29 +233,32 @@ async function licenseFromFolder(
     }
   }
 
-  const joinText = options?.joinText || "\n\n\n\n";
+  const resolved: ResolvedLicense[] = [];
 
-  if (licenseList.length > 0 && readmeLicense) {
-    // prepend notice
-    licenseList.unshift(...noticeList);
-    // append readme license
-    licenseList.push(readmeLicense);
-
-    return { text: licenseList.join(joinText), source: "mixed" };
-  } else if (licenseList.length > 0) {
-    // prepend notice
-    licenseList.unshift(...noticeList);
-
-    return { text: licenseList.join(joinText), source: "license" };
-  } else if (readmeLicense) {
-    // prepend notice
-    noticeList.push(readmeLicense);
-
-    return {
-      text: noticeList.join(joinText),
-      source: "readme",
-    };
+  for (const text of noticeList) {
+    resolved.push({
+      source: "notice",
+      text: text,
+    });
   }
+
+  for (const text of licenseList) {
+    resolved.push({
+      expression: resolveExpression(text),
+      source: "license",
+      text: text,
+    });
+  }
+
+  if (readmeLicense) {
+    resolved.push({
+      expression: resolveExpression(readmeLicense),
+      source: "readme",
+      text: readmeLicense,
+    });
+  }
+
+  return resolved;
 }
 
 async function tryDisk(path: string): Promise<string | undefined> {

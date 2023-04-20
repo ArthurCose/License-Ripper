@@ -1,32 +1,36 @@
 import * as fs from "fs/promises";
 import path from "path";
 import { Options, ResolvedPackage, ripOne } from "./rip-license.js";
-import resolveLicense from "./resolve-license.js";
+import resolveExpression, { mergeExpressions } from "./resolve-expression.js";
 import { PackageMeta } from "./package-meta.js";
 import YAML from "yaml";
+import { getDefaultCacheFolder } from "./cache.js";
+import { logError } from "./log.js";
 
 export type Output = {
   resolved: ResolvedPackage[];
   errors: {
     missingLicenseText: string[];
-    missingLicense: string[];
+    invalidLicense: string[];
   };
 };
 
-export { ripOne, resolveLicense, Options, ResolvedPackage };
-
-export function getDefaultCacheFolder(projectRoot: string): string {
-  return path.join(projectRoot, "node_modules", ".cache", "license-ripper");
-}
+export {
+  ripOne,
+  resolveExpression as resolveLicenseExpression,
+  getDefaultCacheFolder,
+  Options,
+  ResolvedPackage,
+};
 
 export async function ripAll(
   projectRoot: string,
   options?: Options
 ): Promise<Output> {
   const resolved = [];
-  const errors = {
+  const errors: Output["errors"] = {
     missingLicenseText: [],
-    missingLicense: [],
+    invalidLicense: [],
   };
 
   if (!options) {
@@ -52,11 +56,11 @@ export async function ripAll(
       continue;
     }
 
-    if (!data.license) {
-      errors.missingLicense.push(data.name);
+    if (data.licenseExpression.includes("UNKNOWN")) {
+      errors.invalidLicense.push(data.name);
     }
 
-    if (!data.licenseText) {
+    if (data.licenses.length == 0) {
       errors.missingLicenseText.push(data.name);
     }
 
@@ -71,7 +75,15 @@ export async function ripAll(
     const version = data.version.split(".").map((v) => parseInt(v));
 
     const match = existing.find(
-      (oldData) => data.licenseText == oldData.data.licenseText
+      (oldData) =>
+        // same license count
+        data.licenses.length == oldData.data.licenses.length &&
+        // every license has an identical match
+        data.licenses.every((license) =>
+          oldData.data.licenses.some(
+            (oldLicense) => oldLicense.text == license.text
+          )
+        )
     );
 
     if (!match) {
@@ -126,7 +138,7 @@ async function packageFoldersNpm(
   try {
     npmLock = JSON.parse(npmLockJson);
   } catch {
-    console.error("error: failed to parse npm lock file");
+    logError("failed to parse npm lock file");
     return [];
   }
 
@@ -167,7 +179,7 @@ async function packageFoldersPnpm(
   try {
     pnpmLock = YAML.parse(pnpmLockYaml);
   } catch {
-    console.error("error: failed to parse pnpm lock file");
+    logError("failed to parse pnpm lock file");
     return [];
   }
 
@@ -211,7 +223,7 @@ async function packageFoldersFallbackNoDev(
 
   const modulesRoot = path.join(projectRoot, "node_modules");
 
-  const folders = [];
+  const folders: string[] = [];
   const needsSearch = [projectRoot];
 
   while (needsSearch.length > 0) {

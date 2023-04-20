@@ -11,7 +11,7 @@
   ],
   "type": "module",
   "bin": {
-    "license-ripper": "cli.js"
+    "license-ripper": "dist/cli.js"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -20,12 +20,13 @@
     "bin.js"
   ],
   "scripts": {
-    "dev": "npm run build && node cli.js",
+    "dev": "npm run build && node dist/cli.js",
     "build": "tsc",
     "test": "ava --serial",
     "fresh-test": "rimraf package-lock.json test/pm-structures node_modules; npm i && npm run dev -- --summary --include-dev; ava --serial"
   },
   "dependencies": {
+    "chalk": "^5.2.0",
     "marked": "^4.3.0",
     "node-fetch": "3.3",
     "spdx-correct": "^3.2.0",
@@ -37,6 +38,8 @@
     "@types/fs-extra": "^11.0.1",
     "@types/marked": "^4.0.8",
     "@types/node": "*",
+    "@types/spdx-correct": "^3.1.0",
+    "@types/spdx-satisfies": "^0.1.0",
     "ava": "^5.2.0",
     "fs-extra": "^11.1.1",
     "rimraf": "^5.0.0",

@@ -1,9 +1,19 @@
 #!/usr/bin/env node
 import fs from "fs/promises";
-import { ripAll, resolveLicense, getDefaultCacheFolder } from "./dist/index.js";
+import { ripAll, getDefaultCacheFolder, Options } from "./index.js";
+import { mergeExpressions } from "./resolve-expression.js";
 import spdxSatisifies from "spdx-satisfies";
+import chalk from "chalk";
+import { logError, logWarning } from "./log.js";
 
-const supportedArguments = {
+type ArgumentConfig = {
+  args?: string[];
+  alternate?: string;
+  description?: string;
+  hidden?: true;
+};
+
+const supportedArguments: { [key: string]: ArgumentConfig } = {
   "--output": {
     args: ["FILE_NAME"],
     alternate: "-o",
@@ -51,7 +61,7 @@ async function main() {
   let clean = false;
   let outputFile;
   let projectRoot = "";
-  const options = {};
+  const options: Options = {};
 
   for (const group of groupArgs()) {
     switch (group[0]) {
@@ -102,7 +112,7 @@ async function main() {
 
       default:
         if (group[0].startsWith("-")) {
-          console.error(`Unsupported argument '${group[0]}'`);
+          logError(`unsupported argument '${group[0]}'`);
           process.exit(1);
         }
         projectRoot = group[0];
@@ -135,13 +145,14 @@ async function main() {
   });
 
   // resolve output
-  let output;
+  let output: any;
 
   if (summary) {
     output = {};
 
     for (const result of results.resolved) {
-      output[result.license] = (output[result.license] || 0) + 1;
+      output[result.licenseExpression] =
+        (output[result.licenseExpression] || 0) + 1;
     }
   } else if (compress) {
     output = {
@@ -149,18 +160,25 @@ async function main() {
       packages: [],
     };
 
-    const reverseLookup = {};
+    const reverseLookup: { [key: string]: string } = {};
 
     for (const result of results.resolved) {
-      let key = reverseLookup[result.licenseText];
+      const licenses = [];
 
-      if (!key) {
-        key = result.name + "@" + result.version;
-        reverseLookup[result.licenseText] = key;
-        output.licenseText[key] = result.licenseText;
+      for (let i = 0; i < result.licenses.length; i++) {
+        const license = result.licenses[i];
+        let key = reverseLookup[license.text];
+
+        if (!key) {
+          key = `${result.name}@${result.version}/${i}`;
+          reverseLookup[license.text] = key;
+          output.licenseText[key] = license.text;
+        }
+
+        licenses.push({ ...license, text: key });
       }
 
-      output.packages.push({ ...result, licenseText: key });
+      output.packages.push({ ...result, licenses });
     }
   } else {
     output = results.resolved;
@@ -175,51 +193,80 @@ async function main() {
 
   // log warnings
   const resolvedTypeFromText = results.resolved
-    .filter((result) => result.license?.endsWith("*"))
+    .filter((result) => result.licenseExpression.endsWith("*"))
     .map((result) => result.name);
 
   if (resolvedTypeFromText.length > 0) {
-    console.warn(
-      "\nwarning: resolved license from licenseText:",
-      JSON.stringify(resolvedTypeFromText, null, 2)
+    logWarning(
+      "resolved license expression from text:\n  " +
+        resolvedTypeFromText.join("\n  ")
     );
   }
 
   const mismatchedLicenses = results.resolved
-    .filter((result) => {
-      if (
-        !result.license ||
-        !result.licenseText ||
-        result.license.endsWith("*")
-      ) {
-        // impossible to mismatch (ending with *, license is already the result of licenseText)
-        // or does not matter (does not exist for comparison)
+    // filter out anything impossible to mismatch (ending with *, license is already the result of licenseText)
+    .filter((result) => !result.licenseExpression.endsWith("*"))
+    // map for filtering + later usage
+    .map((result) => [
+      chalk.blue(result.name),
+      result.licenseExpression,
+      mergeExpressions(result.licenses),
+    ])
+    // filter for just mismatched expressions
+    .filter(([styledName, expression, resolvedExpression]) => {
+      if (expression.startsWith("SEE LICENSE IN")) {
+        // clearly custom
         return false;
       }
 
-      const resolvedLicense = resolveLicense(result.licenseText);
-
-      if (!resolvedLicense) {
+      if (resolvedExpression.includes("UNKNOWN")) {
+        // impossible to match
         return true;
       }
 
-      return !spdxSatisifies(result.license, resolvedLicense);
+      try {
+        return !spdxSatisifies(expression, resolvedExpression);
+      } catch (e) {
+        // invalid spdx
+        logError(
+          `failed to parse \"${expression}\" from ${styledName}\n` + e.message
+        );
+
+        // can never match with an invalid spdx expression
+        return true;
+      }
     })
-    .map((result) => result.name);
+    .map(
+      ([styledName, expression, resolvedExpression]) =>
+        `${styledName}: defined: "${expression}", resolved: "${resolvedExpression}"`
+    );
 
   if (mismatchedLicenses.length > 0) {
-    console.warn(
-      "\nwarning: mismatched license and licenseText:",
-      JSON.stringify(mismatchedLicenses, null, 2)
+    logWarning(
+      "mismatched license expression and text:\n  " +
+        mismatchedLicenses.join("\n  ")
     );
   }
 
   // log errors
-  if (
-    results.errors.missingLicense.length > 0 ||
-    results.errors.missingLicenseText.length > 0
-  ) {
-    console.error("\nerrors:", JSON.stringify(results.errors, null, 2));
+  let hasErrors = false;
+
+  if (results.errors.invalidLicense.length > 0) {
+    logError(
+      "invalid license\n  " + results.errors.invalidLicense.join("\n  ")
+    );
+    hasErrors = true;
+  }
+
+  if (results.errors.missingLicenseText.length > 0) {
+    logError(
+      "missing license text\n  " +
+        results.errors.missingLicenseText.join("\n  ")
+    );
+    hasErrors = true;
+  }
+
+  if (hasErrors) {
     process.exit(1);
   }
 }
@@ -246,8 +293,8 @@ function groupArgs() {
   }
 
   if (expectedArgs > 0) {
-    console.error(
-      "Missing argument for " + processedArgs[processedArgs.length - 1][0]
+    logError(
+      "missing argument for " + processedArgs[processedArgs.length - 1][0]
     );
     process.exit(1);
   }

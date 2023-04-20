@@ -1,6 +1,8 @@
 import { PackageMeta } from "./package-meta.js";
 
-export default function resolveMetaLicense(packageMeta: PackageMeta) {
+export default function normalizePackageLicense(
+  packageMeta: PackageMeta
+): string | undefined {
   const metaLicense = packageMeta.license;
 
   if (!metaLicense) {
@@ -16,5 +18,5 @@ export default function resolveMetaLicense(packageMeta: PackageMeta) {
   }
 
   // assuming the stricter option by using AND
-  metaLicense.map((license) => license.type).join("AND");
+  return metaLicense.map((license) => license.type).join("AND");
 }

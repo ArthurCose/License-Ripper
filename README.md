@@ -38,7 +38,7 @@ Options:
 ## Config/Options:
 
 ```ts
-{
+export type Options = {
   /** Adds a homepage key containing a URL string for relevant packages, defaults to false */
   includeHomepage?: boolean;
   /** Adds a repository key containing a URL string for relevant packages, defaults to false */
@@ -47,17 +47,22 @@ Options:
   includeFunding?: boolean;
   /** Includes devDependencies in the output, defaults to false */
   includeDev?: boolean;
-  /** Sets the text used to join multiple license files, defaults to "\n\n\n\n" */
-  joinText?: string;
   /** List of package names to exclude from results, used when the license is only provided from a parent package */
   exclude?: string[];
   /** Useful for getting rid of warnings and handling cases where the tool fails to grab the license */
   overrides?: {
-    [packageName: string]: { license?: string; text?: string; file?: string };
+    [packageName: string]: {
+      licenseExpression: string;
+      licenses: {
+        expression?: string;
+        text?: string;
+        file?: string;
+      }[];
+    };
   };
   /** Defaults to [projectRoot]/node_modules/.cache/license-ripper */
   cacheFolder?: string;
-}
+};
 ```
 
 ## Library Usage
@@ -66,7 +71,7 @@ Options:
 const { ripAll } = require("license-ripper");
 
 const projectRoot = "";
-const options = { includeHomepage: true };
+const options = { includeRepository: true };
 const results = ripAll(projectRoot, options);
 
 console.log(JSON.stringify(results, null, 2));
