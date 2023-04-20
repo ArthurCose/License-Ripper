@@ -46,12 +46,12 @@ const supportedArguments: { [key: string]: ArgumentConfig } = {
   "--include": {
     args: ["NAMES"],
     description:
-      "Changes output to only include packages matching NAMES, a comma separated list of package names",
+      "Include only packages with a match in NAMES, a comma separated list of package names",
   },
   "--exclude": {
     args: ["NAMES"],
     description:
-      "Excludes packages matching NAMES, a comma separated list of package names",
+      "Exclude packages matching NAMES, a comma separated list of package names",
   },
   "--summary": {
     description: "Changes output to count licenses grouped by name",
