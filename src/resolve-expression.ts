@@ -5,16 +5,9 @@ const AFL3 = ["Licensed under the Academic Free License version 3.0"];
 
 const APACHE2_LINKS = ["http://www.apache.org/licenses/LICENSE-2.0"];
 const APACHE2 = [
-  [
-    "Apache License",
-    "Version 2.0, January 2004",
-    "http://www.apache.org/licenses/",
-  ].join(" "),
-
-  "You must give any other recipients of the Work or Derivative Works a copy of this License",
-  "You must cause any modified files to carry prominent notices stating that You changed the files",
-  "You must retain, in the Source form of any Derivative Works that You distribute, all copyright, patent, trademark, and attribution notices from the Source form of the Work",
-  'If the Work includes a "NOTICE" text file as part of its distribution,',
+  "Apache License",
+  "Version 2.0, January 2004",
+  "http://www.apache.org/licenses/",
 ];
 
 const EUPL1_1 = ["Licensed under the EUPL V.1.1"];
@@ -61,15 +54,9 @@ const CC0_1_0 = [
 ];
 
 const CC_BY_3_LINKS = ["http://spdx.org/licenses/CC-BY-3.0"];
-const CC_BY_4 = [
-  [
-    "Creative Commons Attribution 4.0 International Public License",
+const CC_BY_3 = ["Creative Commons", "Attribution 3.0"];
 
-    "By exercising the Licensed Rights (defined below), You accept and agree",
-    "to be bound by the terms and conditions of this Creative Commons",
-    'Attribution 4.0 International Public License ("Public License"). To the',
-  ].join(" "),
-];
+const CC_BY_4 = ["Creative Commons", "Attribution 4.0"];
 
 const GPL3 = [
   '"This License" refers to version 3 of the GNU General Public License.',
@@ -201,7 +188,10 @@ export default function resolveExpression(
     matches.push("CC0-1.0");
   }
 
-  if (includesLink(licenseText, CC_BY_3_LINKS)) {
+  if (
+    includesLink(licenseText, CC_BY_3_LINKS) ||
+    includesSequential(licenseText, CC_BY_3)
+  ) {
     matches.push("CC-BY-3.0");
   }
 

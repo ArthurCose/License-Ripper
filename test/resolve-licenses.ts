@@ -18,6 +18,7 @@ test("resolve-license", async (t) => {
     ["BSD3-bcrypt-nodejs.txt", "BSD-3-Clause"],
     ["BSD3-hoist-non-react-statics.txt", "BSD-3-Clause"],
     ["CC0-1.0-mdn-data.txt", "CC0-1.0"],
+    ["CC-BY-3.0-atob.txt", "CC-BY-3.0"],
     ["EUPL-1.1-mimelib.txt", "EUPL-1.1"],
     ["GPL-3.0.txt", "GPL-3.0-only"],
     ["LGPL-2.1-mhalo.kindeditor.txt", "LGPL-2.1-only"],
