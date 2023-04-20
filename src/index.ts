@@ -1,7 +1,7 @@
 import * as fs from "fs/promises";
 import path from "path";
 import { Options, ResolvedPackage, ripOne } from "./rip-license.js";
-import resolveExpression, { mergeExpressions } from "./resolve-expression.js";
+import resolveExpression from "./resolve-expression.js";
 import { PackageMeta } from "./package-meta.js";
 import YAML from "yaml";
 import { getDefaultCacheFolder } from "./cache.js";
@@ -125,7 +125,7 @@ async function packageFolders(
     return await packageFoldersFallbackNoDev(projectRoot, options);
   }
 
-  return await packageFoldersFallback(projectRoot);
+  return await packageFoldersFallback(projectRoot, options);
 }
 
 async function packageFoldersNpm(
@@ -159,7 +159,7 @@ async function packageFoldersNpm(
       packagePath.lastIndexOf("node_modules") + 13
     );
 
-    if (options.exclude?.includes(name)) {
+    if (!isNameAccepted(name, options)) {
       continue;
     }
 
@@ -194,7 +194,7 @@ async function packageFoldersPnpm(
     const nameEnd = key.indexOf("@", 2);
     const name = key.slice(1, nameEnd);
 
-    if (options.exclude?.includes(name)) {
+    if (!isNameAccepted(name, options)) {
       continue;
     }
 
@@ -276,7 +276,7 @@ async function packageFoldersFallbackNoDev(
       .concat(modulesRoot != modulesPath ? storedPackages : []);
 
     for (const packageName of dependencyNames) {
-      if (options.exclude?.includes(packageName)) {
+      if (!isNameAccepted(packageName, options)) {
         continue;
       }
 
@@ -296,7 +296,10 @@ async function packageFoldersFallbackNoDev(
   return folders;
 }
 
-async function packageFoldersFallback(projectRoot: string): Promise<string[]> {
+async function packageFoldersFallback(
+  projectRoot: string,
+  options: Options
+): Promise<string[]> {
   // readdir based search
 
   const folders = [];
@@ -325,7 +328,14 @@ async function packageFoldersFallback(projectRoot: string): Promise<string[]> {
       }
 
       needsSearch.push(path.join(entryPath, "node_modules"));
-      folders.push(entryPath);
+
+      const name = entryPath.slice(
+        entryPath.lastIndexOf("/node_modules/") + 14
+      );
+
+      if (isNameAccepted(name, options)) {
+        folders.push(entryPath);
+      }
     }
   }
 
@@ -350,4 +360,16 @@ function isVersionNewer(sample: number[], against: number[]): boolean {
 
   // same version?
   return false;
+}
+
+function isNameAccepted(name: string, options: Options): boolean {
+  if (options.exclude?.includes(name)) {
+    return false;
+  }
+
+  if (!options.include) {
+    return true;
+  }
+
+  return options.include.includes(name);
 }

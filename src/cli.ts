@@ -43,6 +43,16 @@ const supportedArguments: { [key: string]: ArgumentConfig } = {
     description:
       "Adds a funding key containing a list of URL strings for relevant packages",
   },
+  "--include": {
+    args: ["NAMES"],
+    description:
+      "Changes output to only include packages matching NAMES, a comma separated list of package names",
+  },
+  "--exclude": {
+    args: ["NAMES"],
+    description:
+      "Excludes packages matching NAMES, a comma separated list of package names",
+  },
   "--summary": {
     description: "Changes output to count licenses grouped by name",
   },
@@ -76,6 +86,13 @@ async function main() {
         break;
       case "--include-funding":
         options.includeHomepage = true;
+        break;
+
+      case "--include":
+        options.include = group[1].split(",");
+        break;
+      case "--exclude":
+        options.exclude = group[1].split(",");
         break;
 
       case "--summary":
@@ -194,7 +211,12 @@ async function main() {
   // log warnings
   const resolvedTypeFromText = results.resolved
     .filter((result) => result.licenseExpression.endsWith("*"))
-    .map((result) => result.name);
+    .map(
+      (result) =>
+        `${chalk.blue(result.name)} "${result.licenseExpression}" ${
+          result.path
+        }`
+    );
 
   if (resolvedTypeFromText.length > 0) {
     logWarning(

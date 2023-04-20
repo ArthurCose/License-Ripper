@@ -37,11 +37,13 @@ export type Options = {
   includeDev?: boolean;
   /** List of package names to exclude from results, used when the license is only provided from a parent package */
   exclude?: string[];
+  /** When defined, any packages not in this list are excluded */
+  include?: string[];
   /** Useful for getting rid of warnings and handling cases where the tool fails to grab the license */
   overrides?: {
     [packageName: string]: {
       licenseExpression: string;
-      licenses: {
+      licenses?: {
         expression?: string;
         text?: string;
         file?: string;
@@ -64,12 +66,6 @@ export async function ripOne(
   }
 
   const packageMeta: PackageMeta = JSON.parse(packageJSON);
-
-  if (options?.exclude?.includes(packageMeta.name)) {
-    // checking for folder name above, but the folder name does not always match the package name.
-    // from here on errors will use the proper package name since it can be resolved
-    return;
-  }
 
   let licenses = await licensesTextFromOverride(packageMeta, options);
 
@@ -124,7 +120,7 @@ async function licensesTextFromOverride(
   const override = options?.overrides?.[packageMeta.name];
   const resolved: ResolvedLicense[] = [];
 
-  if (!override) {
+  if (!override || !override.licenses) {
     return resolved;
   }
 
