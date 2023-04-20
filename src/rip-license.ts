@@ -16,12 +16,15 @@ export type ResolvedPackage = {
   licenseText?: string;
   licenseTextSource?: "license" | "mixed" | "readme" | "override";
   homepage?: string;
+  repository?: string;
   funding?: string[];
 };
 
 export type Options = {
   /** Adds a homepage key containing a URL string for relevant packages, defaults to false */
   includeHomepage?: boolean;
+  /** Adds a repository key containing a URL string for relevant packages, defaults to false */
+  includeRepository?: boolean;
   /** Adds a funding key containing a list of URL strings for relevant packages, defaults to false */
   includeFunding?: boolean;
   /** Includes devDependencies in the output, defaults to false */
@@ -93,6 +96,10 @@ export async function ripOne(
 
   if (options?.includeHomepage) {
     output.homepage = packageMeta.homepage;
+  }
+
+  if (options?.includeRepository) {
+    output.repository = resolveRepoUrl(packageMeta);
   }
 
   if (packageMeta.funding && options?.includeFunding) {

@@ -25,6 +25,10 @@ const supportedArguments = {
     description:
       "Adds a homepage key containing a URL string for relevant packages",
   },
+  "--include-repository": {
+    description:
+      "Adds a repository key containing a URL string for relevant packages",
+  },
   "--include-funding": {
     description:
       "Adds a funding key containing a list of URL strings for relevant packages",
@@ -56,6 +60,9 @@ async function main() {
         break;
       case "--include-homepage":
         options.includeHomepage = true;
+        break;
+      case "--include-repository":
+        options.includeRepository = true;
         break;
       case "--include-funding":
         options.includeHomepage = true;

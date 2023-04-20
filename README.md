@@ -27,6 +27,7 @@ Options:
       --compress             Changes output to recycle licenseText, replacing the value with a key
       --include-dev          Includes dev dependencies in the output
       --include-homepage     Adds a homepage key containing a URL string for relevant packages
+      --include-repository   Adds a repository key containing a URL string for relevant packages
       --include-funding      Adds a funding key containing a list of URL strings for relevant packages
       --summary              Changes output to count licenses grouped by name
       --clean                Deletes cached licenses instead of resolving licenses
@@ -40,6 +41,8 @@ Options:
 {
   /** Adds a homepage key containing a URL string for relevant packages, defaults to false */
   includeHomepage?: boolean;
+  /** Adds a repository key containing a URL string for relevant packages, defaults to false */
+  includeRepository?: boolean;
   /** Adds a funding key containing a list of URL strings for relevant packages, defaults to false */
   includeFunding?: boolean;
   /** Includes devDependencies in the output, defaults to false */
