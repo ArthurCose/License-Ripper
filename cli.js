@@ -145,14 +145,15 @@ async function main() {
     const reverseLookup = {};
 
     for (const result of results.resolved) {
-      const existingKey = reverseLookup[result.licenseText];
+      let key = reverseLookup[result.licenseText];
 
-      if (!existingKey) {
-        reverseLookup[result.licenseText] = result.name;
-        output.licenseText[result.name] = result.licenseText;
+      if (!key) {
+        key = result.name + "@" + result.version;
+        reverseLookup[result.licenseText] = key;
+        output.licenseText[key] = result.licenseText;
       }
 
-      output.packages.push({ ...result, licenseText: result.name });
+      output.packages.push({ ...result, licenseText: key });
     }
   } else {
     output = results.resolved;
