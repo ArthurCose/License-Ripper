@@ -229,7 +229,7 @@ async function main() {
       } catch (e) {
         // invalid spdx
         logError(
-          `failed to parse \"${expression}\" from ${styledName}\n` + e.message
+          `failed to parse \"${expression}\" from ${styledName}:\n` + e.message
         );
 
         // can never match with an invalid spdx expression
@@ -253,15 +253,16 @@ async function main() {
 
   if (results.errors.invalidLicense.length > 0) {
     logError(
-      "invalid license\n  " + results.errors.invalidLicense.join("\n  ")
+      "invalid license:\n  " +
+        chalk.blue(results.errors.invalidLicense.join("\n  "))
     );
     hasErrors = true;
   }
 
   if (results.errors.missingLicenseText.length > 0) {
     logError(
-      "missing license text\n  " +
-        results.errors.missingLicenseText.join("\n  ")
+      "missing license text:\n  " +
+        chalk.blue(results.errors.missingLicenseText.join("\n  "))
     );
     hasErrors = true;
   }

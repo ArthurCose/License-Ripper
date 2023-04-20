@@ -76,7 +76,7 @@ class GitHubFs implements Fs {
 
       if (!response.ok) {
         logError(
-          `"${this.readdirUrl}" responded with ${response.status}\n` +
+          `"${this.readdirUrl}" responded with ${response.status}:\n` +
             (await response.text())
         );
 
@@ -124,7 +124,7 @@ class GitLabFs {
 
         if (!response.ok) {
           logError(
-            `"${nextUrl}" responded with ${response.status}\n` +
+            `"${nextUrl}" responded with ${response.status}:\n` +
               (await response.text())
           );
           break;
