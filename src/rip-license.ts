@@ -7,11 +7,12 @@ import normalizePackageRepo from "./normalize-package-repo.js";
 import resolveMetaLicenseExpression from "./normalize-package-license.js";
 import { PackageMeta } from "./package-meta.js";
 import { cacheResult, licenseFromCache } from "./cache.js";
+import loadForcedLicenses, { ForcedLicense } from "./load-forced-licenses.js";
 
 // make sure to increment CACHE_VERSION if this changes
 export type ResolvedLicense = {
   expression?: string;
-  source: "license" | "readme" | "override" | "notice";
+  source: "license" | "readme" | "forced" | "notice";
   text: string;
 };
 
@@ -43,13 +44,20 @@ export type Options = {
   overrides?: {
     [packageName: string]: {
       licenseExpression: string;
-      licenses?: {
-        expression?: string;
-        text?: string;
-        file?: string;
-      }[];
+      licenses?: ForcedLicense[];
     };
   };
+  /** Add anything not picked up by the tool */
+  append?: {
+    name: string;
+    version?: string;
+    path?: string;
+    licenseExpression?: string;
+    licenses?: ForcedLicense[];
+    homepage?: string;
+    repository?: string;
+    funding?: string[];
+  }[];
   /** Defaults to [projectRoot]/node_modules/.cache/license-ripper */
   cacheFolder?: string;
 };
@@ -66,16 +74,20 @@ export async function ripOne(
   }
 
   const packageMeta: PackageMeta = JSON.parse(packageJSON);
+  const override = options?.overrides?.[packageMeta.name];
 
-  let licenses = await licensesTextFromOverride(packageMeta, options);
+  let licenses: ResolvedLicense[] = [];
+
+  if (override && override.licenses) {
+    licenses = await loadForcedLicenses(override.licenses);
+  }
 
   if (licenses.length == 0) {
     licenses = await findLicenseText(packagePath, packageMeta, options);
   }
 
-  const overrides = options?.overrides?.[packageMeta.name];
   let licenseExpression =
-    overrides?.licenseExpression || resolveMetaLicenseExpression(packageMeta);
+    override?.licenseExpression || resolveMetaLicenseExpression(packageMeta);
 
   if (licenseExpression) {
     licenseExpression =
@@ -111,40 +123,6 @@ export async function ripOne(
   }
 
   return output;
-}
-
-async function licensesTextFromOverride(
-  packageMeta: PackageMeta,
-  options?: Options
-): Promise<ResolvedLicense[]> {
-  const override = options?.overrides?.[packageMeta.name];
-  const resolved: ResolvedLicense[] = [];
-
-  if (!override || !override.licenses) {
-    return resolved;
-  }
-
-  for (const overrideLicense of override.licenses) {
-    const license: ResolvedLicense = {
-      expression: "UNKNOWN",
-      source: "override",
-      text: "",
-    };
-
-    if (overrideLicense.file) {
-      license.text = await fs.readFile(overrideLicense.file, "utf8");
-    } else if (overrideLicense.text) {
-      license.text = overrideLicense.text;
-    }
-
-    if (license.text) {
-      resolveExpression(license.text);
-    }
-
-    resolved.push(license);
-  }
-
-  return resolved;
 }
 
 async function findLicenseText(

@@ -1,11 +1,12 @@
 import * as fs from "fs/promises";
 import path from "path";
 import { Options, ResolvedPackage, ripOne } from "./rip-license.js";
-import resolveExpression from "./resolve-expression.js";
+import resolveExpression, { mergeExpressions } from "./resolve-expression.js";
 import { PackageMeta } from "./package-meta.js";
 import YAML from "yaml";
 import { getDefaultCacheFolder } from "./cache.js";
 import { logError } from "./log.js";
+import loadForcedLicenses from "./load-forced-licenses.js";
 
 export type Output = {
   resolved: ResolvedPackage[];
@@ -94,6 +95,29 @@ export async function ripAll(
       // overwrite existing data
       Object.assign(match.data, data);
       match.version = version;
+    }
+  }
+
+  if (options.append) {
+    for (const template of options.append) {
+      const forcedPackage: ResolvedPackage = {
+        name: template.name,
+        version: template.version || "",
+        path: template.path || "",
+        licenseExpression: template.licenseExpression,
+        licenses: await loadForcedLicenses(template.licenses),
+        homepage: template.homepage,
+        repository: template.repository,
+        funding: template.funding,
+      };
+
+      if (!forcedPackage.licenseExpression) {
+        forcedPackage.licenseExpression = mergeExpressions(
+          forcedPackage.licenses
+        );
+      }
+
+      resolved.push(forcedPackage);
     }
   }
 

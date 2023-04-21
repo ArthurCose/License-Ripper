@@ -57,15 +57,28 @@ export type Options = {
   overrides?: {
     [packageName: string]: {
       licenseExpression: string;
-      licenses?: {
-        expression?: string;
-        text?: string;
-        file?: string;
-      }[];
+      licenses?: ForcedLicense[];
     };
   };
+  /** Add anything not picked up by the tool */
+  append?: {
+    name: string;
+    version?: string;
+    path?: string;
+    licenseExpression?: string;
+    licenses?: ForcedLicense[];
+    homepage?: string;
+    repository?: string;
+    funding?: string[];
+  }[];
   /** Defaults to [projectRoot]/node_modules/.cache/license-ripper */
   cacheFolder?: string;
+};
+
+export type ForcedLicense = {
+  expression?: string;
+  text?: string;
+  file?: string;
 };
 ```
 
