@@ -1,6 +1,6 @@
 import * as fs from "fs/promises";
 import resolveExpression from "./resolve-expression.js";
-import { Options, ResolvedLicense } from "./rip-license.js";
+import { ResolvedLicense } from "./rip-license.js";
 
 // make sure to update the README if this changes
 export type ForcedLicense = {

@@ -113,7 +113,7 @@ export async function ripOne(
   }
 
   if (packageMeta.funding && options?.includeFunding) {
-    const funding = Array.isArray(packageMeta)
+    const funding = Array.isArray(packageMeta.funding)
       ? (packageMeta.funding as (string | { url: string })[])
       : [packageMeta.funding];
 

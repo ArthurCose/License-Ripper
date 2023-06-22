@@ -1,0 +1,11 @@
+{
+  "name": "funding-object-array",
+  "funding": [
+    {
+      "url": "https://hello"
+    },
+    {
+      "url": "https://world"
+    }
+  ]
+}
