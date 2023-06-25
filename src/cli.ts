@@ -43,6 +43,10 @@ const supportedArguments: { [key: string]: ArgumentConfig } = {
     description:
       "Adds a funding key containing a list of URL strings for relevant packages",
   },
+  "--include-description": {
+    description:
+      "Adds a description key containing containing the description stored in package.json",
+  },
   "--include": {
     args: ["NAMES"],
     description:
@@ -85,7 +89,10 @@ async function main() {
         options.includeRepository = true;
         break;
       case "--include-funding":
-        options.includeHomepage = true;
+        options.includeFunding = true;
+        break;
+      case "--include-description":
+        options.includeDescription = true;
         break;
 
       case "--include":

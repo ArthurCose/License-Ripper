@@ -29,6 +29,7 @@ Options:
       --include-homepage     Adds a homepage key containing a URL string for relevant packages
       --include-repository   Adds a repository key containing a URL string for relevant packages
       --include-funding      Adds a funding key containing a list of URL strings for relevant packages
+      --include-description  Adds a description key containing containing the description stored in package.json
       --include <NAMES>      Include only packages with a match in NAMES, a comma separated list of package names
       --exclude <NAMES>      Exclude packages matching NAMES, a comma separated list of package names
       --summary              Changes output to count licenses grouped by name
@@ -47,6 +48,8 @@ export type Options = {
   includeRepository?: boolean;
   /** Adds a funding key containing a list of URL strings for relevant packages, defaults to false */
   includeFunding?: boolean;
+  /** Adds a description key containing the description stored in package.json, defaults to false */
+  includeDescription?: boolean;
   /** Includes devDependencies in the output, defaults to false */
   includeDev?: boolean;
   /** List of package names to exclude from results, used when the license is only provided from a parent package */
@@ -70,6 +73,7 @@ export type Options = {
     homepage?: string;
     repository?: string;
     funding?: string[];
+    description?: string;
   }[];
   /** Defaults to [projectRoot]/node_modules/.cache/license-ripper */
   cacheFolder?: string;

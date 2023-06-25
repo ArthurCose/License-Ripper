@@ -109,6 +109,7 @@ export async function ripAll(
         homepage: template.homepage,
         repository: template.repository,
         funding: template.funding,
+        description: template.description,
       };
 
       if (!forcedPackage.licenseExpression) {

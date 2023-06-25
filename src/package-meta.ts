@@ -3,6 +3,7 @@ export type PackageMeta = {
   version: string;
   homepage: string;
   funding: string | (string | { type: string; url: string })[];
+  description?: string;
   license?:
     | string
     | { type: string; url: string }

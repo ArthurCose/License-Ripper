@@ -25,6 +25,7 @@ export type ResolvedPackage = {
   homepage?: string;
   repository?: string;
   funding?: string[];
+  description?: string;
 };
 
 export type Options = {
@@ -34,6 +35,8 @@ export type Options = {
   includeRepository?: boolean;
   /** Adds a funding key containing a list of URL strings for relevant packages, defaults to false */
   includeFunding?: boolean;
+  /** Adds a description key containing the description stored in package.json, defaults to false */
+  includeDescription?: boolean;
   /** Includes devDependencies in the output, defaults to false */
   includeDev?: boolean;
   /** List of package names to exclude from results, used when the license is only provided from a parent package */
@@ -57,6 +60,7 @@ export type Options = {
     homepage?: string;
     repository?: string;
     funding?: string[];
+    description?: string;
   }[];
   /** Defaults to [projectRoot]/node_modules/.cache/license-ripper */
   cacheFolder?: string;
@@ -104,15 +108,19 @@ export async function ripOne(
     licenses,
   };
 
-  if (options?.includeHomepage) {
+  if (!options) {
+    return output;
+  }
+
+  if (options.includeHomepage) {
     output.homepage = packageMeta.homepage;
   }
 
-  if (options?.includeRepository) {
+  if (options.includeRepository) {
     output.repository = normalizePackageRepo(packageMeta);
   }
 
-  if (packageMeta.funding && options?.includeFunding) {
+  if (packageMeta.funding && options.includeFunding) {
     const funding = Array.isArray(packageMeta.funding)
       ? (packageMeta.funding as (string | { url: string })[])
       : [packageMeta.funding];
@@ -120,6 +128,10 @@ export async function ripOne(
     output.funding = funding.map((info: any) =>
       typeof info == "string" ? info : info.url
     );
+  }
+
+  if (packageMeta.description && options.includeDescription) {
+    output.description = packageMeta.description;
   }
 
   return output;
