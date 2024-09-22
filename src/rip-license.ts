@@ -104,7 +104,7 @@ export async function ripOne(
     name: packageMeta.name,
     version: packageMeta.version,
     path: packagePath,
-    licenseExpression,
+    licenseExpression: licenseExpression || "UNKNOWN",
     licenses,
   };
 
@@ -186,7 +186,7 @@ async function findLicenseText(
 async function licenseFromFolder(fs: Fs): Promise<ResolvedLicense[]> {
   let noticeList = [];
   let licenseList = [];
-  let readmeLicense = "";
+  let readmeLicense: string | undefined;
 
   for (const entry of await fs.readdir()) {
     const lowercaseName = entry.toLowerCase();
@@ -194,7 +194,7 @@ async function licenseFromFolder(fs: Fs): Promise<ResolvedLicense[]> {
     // test as apache notice file
     if (lowercaseName.includes("notice")) {
       const text = await fs.readFile(entry);
-      noticeList.push(text);
+      noticeList.push(text!);
       continue;
     }
 
@@ -207,7 +207,7 @@ async function licenseFromFolder(fs: Fs): Promise<ResolvedLicense[]> {
     if (isLicense) {
       // append the license file
       const text = await fs.readFile(entry);
-      licenseList.push(text);
+      licenseList.push(text!);
       continue;
     }
 
@@ -215,7 +215,7 @@ async function licenseFromFolder(fs: Fs): Promise<ResolvedLicense[]> {
     if (lowercaseName.startsWith("readme")) {
       // overwrite the readme license text
       const text = await fs.readFile(entry);
-      readmeLicense = ripMarkdownLicense(text);
+      readmeLicense = ripMarkdownLicense(text!);
     }
   }
 

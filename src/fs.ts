@@ -60,7 +60,7 @@ class GitHubFs implements Fs {
       "/contents";
   }
 
-  async readFile(path: string): Promise<string> {
+  async readFile(path: string): Promise<string | undefined> {
     try {
       const response = await fetch(this.readFilePrefix + path);
 
@@ -104,7 +104,7 @@ class GitLabFs {
       "/repository/tree?per_page=100";
   }
 
-  async readFile(path: string): Promise<string> {
+  async readFile(path: string): Promise<string | undefined> {
     try {
       const response = await fetch(this.readFilePrefix + path);
 
@@ -116,7 +116,7 @@ class GitLabFs {
 
   async readdir(): Promise<string[]> {
     const results = [];
-    let nextUrl = this.readdirUrl;
+    let nextUrl: string | undefined = this.readdirUrl;
 
     while (nextUrl) {
       try {

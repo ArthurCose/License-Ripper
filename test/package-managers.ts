@@ -103,7 +103,7 @@ async function testPackageManager(
 }
 
 function keyByNameAndVersion(input: { name: string; version: string }[]) {
-  const map = {};
+  const map: { [key: string]: { name: string; version: string } } = {};
 
   for (const o of input) {
     map[o.name + "@" + o.version] = o;
