@@ -180,9 +180,9 @@ async function packageFoldersNpm(
       continue;
     }
 
-    const name = packagePath.slice(
-      packagePath.lastIndexOf("node_modules") + 13
-    );
+    const name =
+      packageData.name ||
+      packagePath.slice(packagePath.lastIndexOf("node_modules") + 13);
 
     if (!isNameAccepted(name, options)) {
       continue;
