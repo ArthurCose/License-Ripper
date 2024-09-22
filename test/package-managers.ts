@@ -1,9 +1,9 @@
 import test, { ExecutionContext } from "ava";
 import { ripAll, Options } from "../dist/index.js";
 import fs from "fs-extra";
-import child_process from "child_process";
-import { promisify } from "util";
-import path from "path";
+import child_process from "node:child_process";
+import { promisify } from "node:util";
+import path from "node:path";
 
 const exec = promisify(child_process.exec);
 
@@ -31,7 +31,10 @@ test.serial("no-lock-file", async (t) => {
 test.serial("pnpm", async (t) => {
   const folder = path.join(BASE_FOLDER, "pnpm");
 
-  await install("pnpm i", folder, () => fs.rm("pnpm-lock.yaml"));
+  await install("pnpm i", folder, async () => {
+    fs.copyFile("package.json", path.join(folder, "package.json"));
+    fs.rename("pnpm-lock.yaml", path.join(folder, "pnpm-lock.yaml"));
+  });
 
   await testPackageManager(t, folder, baseOptions);
   await testPackageManager(t, folder, includeDevOptions);
@@ -51,7 +54,7 @@ async function install(
 
   try {
     // backup old node_modules
-    await fs.rename("node_modules", "pm-test-node_modules-backup");
+    await fs.rename("node_modules", "_node_modules-backup");
 
     // install packages and create destination
     await Promise.all([exec(command), fs.mkdir(folder, { recursive: true })]);
@@ -61,7 +64,7 @@ async function install(
   } catch (e) {
     throw e;
   } finally {
-    await fs.rename("pm-test-node_modules-backup", "node_modules");
+    await fs.rename("_node_modules-backup", "node_modules");
   }
 
   // copy cache to reduce API requests

@@ -31,8 +31,7 @@
     "marked": "14",
     "node-fetch": "3",
     "spdx-correct": "3",
-    "spdx-satisfies": "5",
-    "yaml": "2"
+    "spdx-satisfies": "5"
   },
   "devDependencies": {
     "@ava/typescript": "5",

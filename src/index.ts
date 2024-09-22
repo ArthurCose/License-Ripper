@@ -1,12 +1,15 @@
-import * as fs from "fs/promises";
+import * as fs from "node:fs/promises";
+import child_process from "node:child_process";
+import { promisify } from "node:util";
 import path from "path";
 import { Options, ResolvedPackage, ripOne } from "./rip-license.js";
 import resolveExpression, { mergeExpressions } from "./resolve-expression.js";
 import { PackageMeta } from "./package-meta.js";
-import YAML from "yaml";
 import { getDefaultCacheFolder } from "./cache.js";
 import { logError } from "./log.js";
 import loadForcedLicenses from "./load-forced-licenses.js";
+
+const exec = promisify(child_process.exec);
 
 export type Output = {
   resolved: ResolvedPackage[];
@@ -133,17 +136,14 @@ async function packageFolders(
     const lockPath = path.join(projectRoot, "package-lock.json");
     const npmLockJson = await fs.readFile(lockPath, "utf8");
     return await packageFoldersNpm(projectRoot, npmLockJson, options);
-  } catch (e) {
+  } catch {
     // file not found, not using npm
   }
 
   try {
-    const pnpmFolder = path.join(projectRoot, "node_modules", ".pnpm");
-    const pnpmLockPath = path.join(pnpmFolder, "lock.yaml");
-    const pnpmLockYaml = await fs.readFile(pnpmLockPath, "utf8");
-    return await packageFoldersPnpm(pnpmFolder, pnpmLockYaml, options);
+    return await packageFoldersPnpm(projectRoot, options);
   } catch {
-    // file not found, not using pnpm
+    // command failed, not using pnpm
   }
 
   if (!options.includeDev) {
@@ -195,42 +195,31 @@ async function packageFoldersNpm(
 }
 
 async function packageFoldersPnpm(
-  pnpmFolder: string,
-  pnpmLockYaml: string,
+  projectFolder: string,
   options: Options
 ): Promise<string[]> {
-  let pnpmLock;
+  type Output = { [spdx: string]: { name: string; paths: string[] }[] };
 
-  try {
-    pnpmLock = YAML.parse(pnpmLockYaml);
-  } catch {
-    logError("failed to parse pnpm lock file");
-    return [];
+  const filterFlag = options.includeDev ? "" : "--prod";
+  const command = `pnpm licenses ls ${filterFlag} --json`;
+  const { stdout, stderr } = await exec(command, { cwd: projectFolder });
+
+  if (stderr) {
+    throw stderr;
   }
+
+  const output = JSON.parse(stdout) as Output;
 
   const folders = [];
 
-  for (const key in pnpmLock.packages) {
-    if (!options.includeDev && pnpmLock.packages[key].dev) {
-      // skip dev
-      continue;
+  for (const projects of Object.values(output)) {
+    for (const project of projects) {
+      if (!isNameAccepted(project.name, options)) {
+        continue;
+      }
+
+      folders.push(...project.paths);
     }
-
-    const nameEnd = key.indexOf("@", 2);
-    const name = key.slice(1, nameEnd);
-
-    if (!isNameAccepted(name, options)) {
-      continue;
-    }
-
-    const packagePath = path.join(
-      pnpmFolder,
-      key.slice(1).replace(/\//g, "+").replace(/\(/g, "_").replace(/\)/g, ""),
-      "node_modules",
-      name
-    );
-
-    folders.push(packagePath);
   }
 
   return folders;

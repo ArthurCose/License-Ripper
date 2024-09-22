@@ -10,7 +10,8 @@ const OPTIONS = {
 
 test("download-licenses", async (t) => {
   const packages = [
-    ["dual-licensed-mit-apache-package", "(Apache-2.0 AND MIT)*"],
+    // todo: find a replacement and fork it:
+    // ["dual-licensed-mit-apache-package", "(Apache-2.0 AND MIT)*"],
     ["gitlab", "(UNKNOWN AND MIT)*"],
   ];
 
