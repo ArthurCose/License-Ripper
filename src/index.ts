@@ -60,6 +60,10 @@ export async function ripAll(
       continue;
     }
 
+    if (!isNameAccepted(data.name, options)) {
+      continue;
+    }
+
     if (data.licenseExpression.includes("UNKNOWN")) {
       errors.invalidLicense.push(data.name);
     }
