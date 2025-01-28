@@ -2,7 +2,7 @@
 import fs from "fs/promises";
 import { ripAll, getDefaultCacheFolder, Options } from "./index.js";
 import { mergeExpressions } from "./resolve-expression.js";
-import spdxSatisifies from "spdx-satisfies";
+import spdxSatisfies from "spdx-satisfies";
 import chalk from "chalk";
 import { logError, logWarning } from "./log.js";
 
@@ -254,7 +254,7 @@ async function main() {
       }
 
       try {
-        return !spdxSatisifies(resolvedExpression, expression);
+        return !spdxSatisfies(resolvedExpression, expression);
       } catch (e) {
         // invalid spdx
         logError(
