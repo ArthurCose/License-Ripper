@@ -31,6 +31,18 @@ function normalizeRepoUrl(url: string) {
   } else if (url.startsWith("git+")) {
     // drop git+ prefix
     url = url.slice(4);
+
+    if (url.startsWith("ssh://")) {
+      // search for a username in the url and strip it
+      const PROTOCOL_LEN = 5;
+      const endIndex = Math.max(
+        url.indexOf("@", PROTOCOL_LEN) + 1,
+        PROTOCOL_LEN
+      );
+
+      // swap ssh for https as ssh is incompatible
+      url = "https://" + url.slice(endIndex);
+    }
   } else if (url.startsWith("github:")) {
     url = "https://github.com/" + url.slice(7);
   } else if (url.startsWith("gitlab:")) {
