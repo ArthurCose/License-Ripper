@@ -1,6 +1,6 @@
 {
   "name": "license-ripper",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "description": "Rips license text from LICENSE and README files.",
   "repository": "https://github.com/ArthurCose/License-Ripper",
   "author": "Arthur Cosentino",
@@ -27,23 +27,23 @@
     "prepublishOnly": "rimraf dist && tsc && npm run test"
   },
   "dependencies": {
-    "chalk": "5",
-    "marked": "14",
+    "chalk": "5.3",
+    "marked": "15",
     "node-fetch": "3",
     "spdx-correct": "3",
     "spdx-satisfies": "5"
   },
   "devDependencies": {
-    "@ava/typescript": "5",
-    "@types/fs-extra": "11",
-    "@types/node": "^22.5.5",
-    "@types/spdx-correct": "3",
-    "@types/spdx-satisfies": "0.1",
-    "ava": "6",
-    "fs-extra": "11",
-    "rimraf": "6",
-    "tsimp": "2",
-    "typescript": "5.5"
+    "@ava/typescript": "^5",
+    "@types/fs-extra": "^11",
+    "@types/node": "^22.12.0",
+    "@types/spdx-correct": "^3",
+    "@types/spdx-satisfies": "^0.1",
+    "ava": "^6.2",
+    "fs-extra": "^11",
+    "rimraf": "^6",
+    "tsimp": "^2",
+    "typescript": "^5.5"
   },
   "ava": {
     "extensions": {
