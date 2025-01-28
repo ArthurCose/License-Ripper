@@ -29,6 +29,7 @@ test("resolve-license", async (t) => {
     ["MIT-source-map-support.txt", "MIT"],
     ["MIT-unquote.txt", "MIT"],
     ["MIT-xmlhttprequest-ssl.txt", "MIT"],
+    ["MPL-2.0.txt", "MPL-2.0"],
     ["Unlicense-stackframe.txt", "Unlicense"],
   ];
 

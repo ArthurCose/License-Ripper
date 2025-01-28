@@ -115,6 +115,8 @@ const MIT = [
   // shall be included in all copies or substantial portions of the Software
 ];
 
+const MPL2 = ["Mozilla Public License Version 2.0", "1. Definitions"];
+
 const UNLICENSE = [
   "This is free and unencumbered software released into the public domain.",
 ];
@@ -220,6 +222,10 @@ export default function resolveExpression(
     includesSequential(licenseText, MIT)
   ) {
     matches.push("MIT");
+  }
+
+  if (includesSequential(licenseText, MPL2)) {
+    matches.push("MPL-2.0");
   }
 
   if (includesSequential(licenseText, UNLICENSE)) {
