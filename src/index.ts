@@ -391,3 +391,38 @@ function isNameAccepted(name: string, options: Options): boolean {
 
   return options.include.includes(name);
 }
+
+export type CompressedOutput = {
+  packages: ResolvedPackage[];
+  licenseText: { [key: string]: string };
+};
+
+export function compress(resolvedPackages: ResolvedPackage[]) {
+  const output: CompressedOutput = {
+    packages: [],
+    licenseText: {},
+  };
+
+  const reverseLookup: { [key: string]: string } = {};
+
+  for (const result of resolvedPackages) {
+    const licenses = [];
+
+    for (let i = 0; i < result.licenses.length; i++) {
+      const license = result.licenses[i];
+      let key = reverseLookup[license.text];
+
+      if (!key) {
+        key = `${result.name}@${result.version}/${i}`;
+        reverseLookup[license.text] = key;
+        output.licenseText[key] = license.text;
+      }
+
+      licenses.push({ ...license, text: key });
+    }
+
+    output.packages.push({ ...result, licenses });
+  }
+
+  return output;
+}

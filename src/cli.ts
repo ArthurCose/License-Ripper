@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import fs from "fs/promises";
-import { ripAll, getDefaultCacheFolder, Options } from "./index.js";
+import { ripAll, getDefaultCacheFolder, Options, compress } from "./index.js";
 import { mergeExpressions } from "./resolve-expression.js";
 import spdxSatisfies from "spdx-satisfies";
 import chalk from "chalk";
@@ -71,7 +71,7 @@ const supportedArguments: { [key: string]: ArgumentConfig } = {
 
 async function main() {
   let summary = false;
-  let compress = false;
+  let compressing = false;
   let clean = false;
   let outputFile;
   let projectRoot = "";
@@ -107,7 +107,7 @@ async function main() {
         break;
 
       case "--compress":
-        compress = true;
+        compressing = true;
         break;
 
       case "-o":
@@ -178,32 +178,8 @@ async function main() {
       output[result.licenseExpression] =
         (output[result.licenseExpression] || 0) + 1;
     }
-  } else if (compress) {
-    output = {
-      licenseText: {},
-      packages: [],
-    };
-
-    const reverseLookup: { [key: string]: string } = {};
-
-    for (const result of results.resolved) {
-      const licenses = [];
-
-      for (let i = 0; i < result.licenses.length; i++) {
-        const license = result.licenses[i];
-        let key = reverseLookup[license.text];
-
-        if (!key) {
-          key = `${result.name}@${result.version}/${i}`;
-          reverseLookup[license.text] = key;
-          output.licenseText[key] = license.text;
-        }
-
-        licenses.push({ ...license, text: key });
-      }
-
-      output.packages.push({ ...result, licenses });
-    }
+  } else if (compressing) {
+    output = compress(results.resolved);
   } else {
     output = results.resolved;
   }

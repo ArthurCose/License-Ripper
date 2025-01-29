@@ -1,6 +1,6 @@
 {
   "name": "license-ripper",
-  "version": "0.8.3",
+  "version": "0.9.0",
   "description": "Rips license text from LICENSE and README files.",
   "repository": "https://github.com/ArthurCose/License-Ripper",
   "author": "Arthur Cosentino",
