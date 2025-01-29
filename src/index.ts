@@ -2,7 +2,12 @@ import * as fs from "node:fs/promises";
 import child_process from "node:child_process";
 import { promisify } from "node:util";
 import path from "path";
-import { Options, ResolvedPackage, ripOne } from "./rip-license.js";
+import {
+  Options,
+  ResolvedLicense,
+  ResolvedPackage,
+  ripOne,
+} from "./rip-license.js";
 import resolveExpression, { mergeExpressions } from "./resolve-expression.js";
 import { PackageMeta } from "./package-meta.js";
 import { getDefaultCacheFolder } from "./cache.js";
@@ -392,18 +397,26 @@ function isNameAccepted(name: string, options: Options): boolean {
   return options.include.includes(name);
 }
 
-export type CompressedOutput = {
-  packages: ResolvedPackage[];
-  licenseText: { [key: string]: string };
+export type ResolvedLicenseCompressed = Omit<ResolvedLicense, "text"> & {
+  text: number;
+};
+
+export type ResolvedPackageCompressed = Omit<ResolvedPackage, "licenses"> & {
+  licenses: ResolvedLicenseCompressed[];
+};
+
+export type OutputCompressed = {
+  packages: ResolvedPackageCompressed[];
+  licenseText: string[];
 };
 
 export function compress(resolvedPackages: ResolvedPackage[]) {
-  const output: CompressedOutput = {
+  const output: OutputCompressed = {
     packages: [],
-    licenseText: {},
+    licenseText: [],
   };
 
-  const reverseLookup: { [key: string]: string } = {};
+  const reverseLookup: { [key: string]: number } = {};
 
   for (const result of resolvedPackages) {
     const licenses = [];
@@ -412,16 +425,21 @@ export function compress(resolvedPackages: ResolvedPackage[]) {
       const license = result.licenses[i];
       let key = reverseLookup[license.text];
 
-      if (!key) {
-        key = `${result.name}@${result.version}/${i}`;
+      if (key == undefined) {
+        key = output.licenseText.length;
         reverseLookup[license.text] = key;
-        output.licenseText[key] = license.text;
+        output.licenseText.push(license.text);
       }
 
       licenses.push({ ...license, text: key });
     }
 
-    output.packages.push({ ...result, licenses });
+    const packageCompressed = {
+      ...result,
+      licenses,
+    };
+
+    output.packages.push(packageCompressed);
   }
 
   return output;

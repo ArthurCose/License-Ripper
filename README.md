@@ -24,7 +24,7 @@ Usage: license-ripper [OPTIONS] [PROJECT_ROOT]
 Options:
   -o, --output <FILE_NAME>   Writes output to a file rather than stdout
       --config <FILE_NAME>   Passes the file as ripAll's options parameter
-      --compress             Changes output to recycle license text, replacing the value with a key
+      --compress             Changes output to recycle license text, replacing the value with an index
       --include-dev          Includes dev dependencies in the output
       --include-homepage     Adds a homepage key containing a URL string for relevant packages
       --include-repository   Adds a repository key containing a URL string for relevant packages

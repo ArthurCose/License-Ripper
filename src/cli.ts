@@ -26,7 +26,7 @@ const supportedArguments: { [key: string]: ArgumentConfig } = {
   },
   "--compress": {
     description:
-      "Changes output to recycle license text, replacing the value with a key",
+      "Changes output to recycle license text, replacing the value with an index",
   },
   "--include-dev": {
     description: "Includes dev dependencies in the output",
