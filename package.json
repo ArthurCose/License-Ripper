@@ -1,6 +1,6 @@
 {
   "name": "license-ripper",
-  "version": "0.10.0",
+  "version": "0.10.1",
   "description": "Collects license text from LICENSE and README files for generating attribution pages.",
   "repository": "https://github.com/ArthurCose/License-Ripper",
   "author": "Arthur Cosentino",
@@ -28,7 +28,7 @@
   },
   "dependencies": {
     "chalk": "5.3",
-    "marked": "15",
+    "marked": "16",
     "node-fetch": "3",
     "spdx-correct": "3",
     "spdx-satisfies": "5"
