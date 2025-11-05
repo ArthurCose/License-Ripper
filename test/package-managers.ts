@@ -111,6 +111,8 @@ async function testPackageManager(
         `expecting "${key}", found: [${matchList.join(", ")}]`
       );
     }
+
+    t.deepEqual(other.resolved.length, npm.resolved.length);
   } else {
     // check just names
     const npmResolvedByName = listStringsByName(other.resolved);
@@ -119,8 +121,6 @@ async function testPackageManager(
       t.assert(otherResolvedByName[key], `expecting "${key}"`);
     }
   }
-
-  t.deepEqual(other.resolved.length, npm.resolved.length);
 }
 
 function keyByNameAndVersion(input: { name: string; version: string }[]) {
