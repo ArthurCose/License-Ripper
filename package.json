@@ -1,7 +1,7 @@
 {
   "name": "license-ripper",
   "version": "0.10.0",
-  "description": "Rips license text from LICENSE and README files.",
+  "description": "Collects license text from LICENSE and README files for generating attribution pages.",
   "repository": "https://github.com/ArthurCose/License-Ripper",
   "author": "Arthur Cosentino",
   "license": "ISC",
